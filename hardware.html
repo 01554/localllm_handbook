@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>サーバーGPU編 — 一覧とGLM-5.2×1M×10のRoofline</title>
+<style>
+  :root{
+    --bg:#f6f7fb; --ink:#1f2733; --soft:#5a6675; --line:#e3e7ef; --card:#ffffff;
+    --indigo:#4f5bd5; --indigo-bg:#eceefb; --teal:#0e9888; --teal-bg:#e3f5f1;
+    --amber:#c47d18; --amber-bg:#fdf3e0; --red:#cf4040; --red-bg:#fbe9e7;
+    --shadow:0 2px 14px rgba(31,39,51,.06);
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",sans-serif;
+    line-height:1.85;font-size:15.5px}
+  a{color:var(--indigo)}
+  header.hero{padding:64px 24px 40px;background:linear-gradient(180deg,#eef0fb,transparent);border-bottom:1px solid var(--line)}
+  header.hero .wrap{max-width:1080px;margin:0 auto}
+  .kicker{letter-spacing:.28em;font-size:.74rem;color:var(--indigo);font-weight:700}
+  header.hero h1{font-size:clamp(1.6rem,4vw,2.5rem);margin:.3em 0 .15em}
+  header.hero p{color:var(--soft);max-width:760px;margin:.4em 0}
+  nav.toc{position:sticky;top:0;z-index:20;background:rgba(246,247,251,.95);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);padding:10px 16px;font-size:.8rem;overflow-x:auto;white-space:nowrap}
+  nav.toc a{color:var(--soft);text-decoration:none;margin-right:14px}
+  nav.toc a:hover{color:var(--indigo)}
+  main{max-width:1080px;margin:0 auto;padding:8px 22px 80px}
+  .sec{padding:34px 0 8px;border-top:2px solid var(--indigo);margin-top:14px}
+  .sec:first-child{border-top:none}
+  .sec>.cn{font:700 .76rem/1 var(--mono);color:var(--indigo);letter-spacing:.12em}
+  .sec h2{font-size:clamp(1.25rem,3vw,1.7rem);margin:.2em 0 .1em}
+  .sec h2 .sub{display:block;font-size:.82rem;color:var(--soft);font-weight:600;margin-top:3px}
+  p{margin:.7em 0}
+  .lead{font-size:1.02rem;font-weight:700;color:var(--indigo);background:var(--indigo-bg);
+    border-radius:10px;padding:12px 16px;margin:.6em 0 1em;border-left:5px solid var(--indigo)}
+  table{width:100%;border-collapse:collapse;margin:1em 0;font-size:.84rem;background:var(--card);
+    border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+  th,td{padding:.5em .65em;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+  thead th{background:var(--indigo-bg);color:var(--ink);font-size:.76rem}
+  tbody tr:last-child td{border-bottom:none}
+  td.num,th.num{text-align:right;font-family:var(--mono)}
+  .yes{color:var(--teal);font-weight:700}.no{color:#b9c0cc}
+  .tag-est{display:inline-block;font:700 .62rem/1 var(--mono);padding:.25em .45em;border-radius:5px;background:var(--amber-bg);color:var(--amber)}
+  .tag-off{background:#e6eef7;color:#2f6fb0}
+  .formula{background:#1c2230;color:#e7ecf5;border-radius:10px;padding:14px 18px;margin:1em 0;
+    font-family:var(--mono);font-size:.84rem;line-height:1.7;overflow-x:auto;white-space:pre-wrap}
+  .formula .l{color:#8fb3ff;font-size:.7rem;letter-spacing:.12em;display:block;margin-bottom:.4em}
+  .callout{border-radius:10px;padding:12px 16px;margin:1em 0;border-left:4px solid;font-size:.9rem}
+  .callout .t{font-weight:800;font-size:.68rem;letter-spacing:.1em;display:block;margin-bottom:.2em;text-transform:uppercase}
+  .fact{background:var(--teal-bg);border-color:var(--teal)} .fact .t{color:var(--teal)}
+  .caution{background:var(--red-bg);border-color:var(--red)} .caution .t{color:var(--red)}
+  .scroll{overflow-x:auto}
+  footer{max-width:1080px;margin:0 auto;padding:30px 22px 80px;color:var(--soft);font-size:.83rem}
+  @media(max-width:760px){th,td{white-space:normal}}
+  a.glnav{position:fixed;top:10px;right:12px;z-index:60;background:#1f3a5f;color:#fff;padding:.32em .7em;border-radius:8px;font-size:.76rem;font-weight:700;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.2)}a.glnav:hover{background:#2a4d77}
+a.gl{color:inherit;text-decoration:underline dotted;text-underline-offset:2px;text-decoration-color:#b3b9c6}a.gl:hover{text-decoration-style:solid;text-decoration-color:currentColor}a.glnav{position:fixed;top:10px;right:12px;z-index:60;background:#1f3a5f;color:#fff;padding:.32em .7em;border-radius:8px;font-size:.76rem;font-weight:700;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.2)}a.glnav:hover{background:#2a4d77}figure{margin:1.3em 0;text-align:center}figure img{max-width:min(100%,640px);display:block;margin-inline:auto;border-radius:12px;border:1px solid var(--line);background:#fff;box-shadow:0 2px 14px rgba(31,39,51,.07)}figure figcaption{font-size:.84rem;color:var(--soft);margin-top:.5em;max-width:640px;margin-inline:auto}</style>
+</head>
+<body>
+<a href="glossary.html" class="glnav">📖 用語集</a>
+<header class="hero"><div class="wrap">
+  <div class="kicker">勉強会 / 補章 — <a class="gl" href="term-data-center-gpu.html">サーバーGPU</a>編（技術者向け）</div>
+  <h1>サーバーGPUの現在地と、GLM-5.2×1M×10 のRoofline</h1>
+  <p>民生用<a class="gl" href="term-rtx-five-zero-nine-zero.html">RTX 5090</a>ではなく、<a class="gl" href="term-a100.html">A100</a>・<a class="gl" href="term-l40s.html">L40S</a>・<a class="gl" href="term-h100.html">H100</a>・<a class="gl" href="term-h200.html">H200</a>・<a class="gl" href="term-blackwell.html">Blackwell</a>（<a class="gl" href="term-b200.html">B200</a>/<a class="gl" href="term-gb200.html">GB200</a>/<a class="gl" href="term-b300.html">B300</a>/<a class="gl" href="term-gb300.html">GB300</a>）等の<a class="gl" href="term-data-center-gpu.html">データセンターGPU</a>を一覧化し、FP8/<a class="gl" href="term-fp4.html">FP4</a>/<a class="gl" href="term-bf-sixteen.html">BF16</a>で速度がどう変わるか、そして<a class="gl" href="term-glm-5-2.html">GLM-5.2</a>を1Mコンテキスト×10<a class="gl" href="term-sequence.html">シーケンス</a>で動かすと生成<a class="gl" href="term-tokens-per-second.html">tok/sec</a>がどうなるかを概算する。価格・将来世代は2026年6月時点で、推定・暫定は明示する。</p>
+</div></header>
+
+<nav class="toc">
+  <a href="#s1">1. 世代マップ</a><a href="#s2">2. 一覧（容量・帯域・FP）</a><a href="#s3">3. coherentメモリ</a>
+  <a href="#s4">4. FP8/FP4/BF16の速度差</a><a href="#s5">5. ケース: GLM-5.2×1M×10</a><a href="#s6">6. まとめ・注意</a>
+  <a href="index4.html">⟵ 技術者向け本編</a>
+</nav>
+
+<main>
+
+<!-- S1 -->
+<div class="sec" id="s1"><span class="cn">SECTION 1</span><h2>サーバーGPUの世代マップ<span class="sub">HBM・低精度演算・接続ドメインの進化</span></h2></div>
+<p class="lead">世代交代で効くのは演算性能だけでなく、モデルと<a class="gl" href="term-kv-cache.html">KVキャッシュ</a>を保持するメモリ容量、decodeを決めるメモリ帯域、そして複数GPUをどこまで一体として扱えるか。</p>
+<p>流れは、<a class="gl" href="term-ampere.html">Ampere</a>の<a class="gl" href="term-a100.html">A100</a>を起点に、<a class="gl" href="term-ada.html">Ada</a>世代の汎用<a class="gl" href="term-pcie.html">PCIe</a> GPUである<a class="gl" href="term-l40s.html">L40S</a>、<a class="gl" href="term-hopper.html">Hopper</a>世代の<a class="gl" href="term-h100-h200.html">H100/H200</a>とGrace <a class="gl" href="term-hopper.html">Hopper</a>を統合した<a class="gl" href="term-gh200.html">GH200</a>、<a class="gl" href="term-blackwell.html">Blackwell</a>世代の<a class="gl" href="term-b200.html">B200</a>/<a class="gl" href="term-gb200.html">GB200</a>、<a class="gl" href="term-blackwell-ultra.html">Blackwell Ultra</a>の<a class="gl" href="term-b300.html">B300</a>/<a class="gl" href="term-gb300.html">GB300</a>、さらに次世代の<a class="gl" href="term-rubin.html">Rubin</a>へ続く。ただし<a class="gl" href="term-l40s.html">L40S</a>は<a class="gl" href="term-a100.html">A100</a>の直接的な後継ではなく、グラフィックス・映像処理・AI推論を広く扱う<a class="gl" href="term-pcie.html">PCIe</a>型の分岐と見るべきである。</p>
+<p><a class="gl" href="term-a100.html">A100</a>は<a class="gl" href="term-hbm.html">HBM</a>と<a class="gl" href="term-nvlink.html">NVLink</a>を備えた大規模基盤を普及させた世代だが、FP8と<a class="gl" href="term-fp4.html">FP4</a>には対応しない。<a class="gl" href="term-l40s.html">L40S</a>はFP8に対応する一方、メモリは<a class="gl" href="term-gddr6.html">GDDR6</a>で<a class="gl" href="term-nvlink.html">NVLink</a>を持たない。<a class="gl" href="term-hopper.html">Hopper</a>では<a class="gl" href="term-h100.html">H100</a>がFP8を導入し、<a class="gl" href="term-h200.html">H200</a>は同じ<a class="gl" href="term-hopper.html">Hopper</a>系のまま<a class="gl" href="term-hbm.html">HBM</a><a class="gl" href="term-capacity-vs-bandwidth.html">容量と帯域</a>を拡張した。<a class="gl" href="term-gh200.html">GH200</a>はGrace CPUと<a class="gl" href="term-hopper.html">Hopper</a> GPUを<a class="gl" href="term-nvlink-c2c.html">NVLink-C2C</a>で接続し、CPUメモリと<a class="gl" href="term-vram.html">GPUメモリ</a>をcoherentに扱える点が特徴である。</p>
+<p><a class="gl" href="term-blackwell.html">Blackwell</a>では<a class="gl" href="term-b200.html">B200</a>が<a class="gl" href="term-fp4.html">FP4</a>に対応し、<a class="gl" href="term-gb200.html">GB200</a>ではGrace CPUと2基の<a class="gl" href="term-b200.html">B200</a>を<a class="gl" href="term-superchip.html">Superchip</a>として統合する。<a class="gl" href="term-gb200-nvl72.html">GB200 NVL72</a>は72GPUを単一の<a class="gl" href="term-nvlink.html">NVLink</a>ドメインに収め、ラック全体を「巨大な1基のアクセラレータ」に近い単位として扱う。<a class="gl" href="term-blackwell-ultra.html">Blackwell Ultra</a>の<a class="gl" href="term-b300.html">B300</a>/<a class="gl" href="term-gb300.html">GB300</a>は公式情報に基づくが、容量やラック最大値は構成依存で要検証。<a class="gl" href="term-rubin.html">Rubin</a>は288GB <a class="gl" href="term-hbm.html">HBM4</a>・22,000GB/s・<a class="gl" href="term-nvlink.html">NVLink</a> 3,600GB/sという値が示されているが、いずれも公式（暫定）であり、確定値として調達・性能計画に使わない。B100は公式datasheetが確認できないため本ページの比較値に採用しない。</p>
+
+<figure><img src="image/hw-gen-map.png" alt="サーバーGPUの世代マップ"><figcaption><a class="gl" href="term-a100.html">A100</a>→<a class="gl" href="term-l40s.html">L40S</a>→<a class="gl" href="term-h100-h200.html">H100/H200</a>/<a class="gl" href="term-gh200.html">GH200</a>→<a class="gl" href="term-blackwell.html">Blackwell</a>(<a class="gl" href="term-b200.html">B200</a>/<a class="gl" href="term-gb200.html">GB200</a>/<a class="gl" href="term-b300.html">B300</a>/<a class="gl" href="term-gb300.html">GB300</a>)→<a class="gl" href="term-rubin.html">Rubin</a> の世代マップ。<a class="gl" href="term-hbm.html">HBM</a>・FP8/<a class="gl" href="term-fp4.html">FP4</a>・<a class="gl" href="term-nvlink.html">NVLink</a>が進化。</figcaption></figure>
+<div class="callout fact"><span class="t"><a class="gl" href="term-rtx-five-zero-nine-zero.html">RTX 5090</a>との違い</span>民生用<a class="gl" href="term-rtx-five-zero-nine-zero.html">RTX 5090</a>も<a class="gl" href="term-blackwell.html">Blackwell</a>系だが、<a class="gl" href="term-hbm.html">HBM</a>・大規模<a class="gl" href="term-nvlink.html">NVLink</a>ファブリック・CPU-GPU coherentメモリ・ラック運用を前提とする<a class="gl" href="term-b200.html">B200</a>/<a class="gl" href="term-gb200.html">GB200</a>とは別カテゴリ。ローカル開発や単体推論には使えても、共有サービスの基盤としては別軸で比較する。</div>
+
+<!-- S2 -->
+<div class="sec" id="s2"><span class="cn">SECTION 2</span><h2>主要GPU一覧<span class="sub">容量・帯域・FP8/FP4・NVLink</span></h2></div>
+<div class="callout fact mb-col"><span class="t">原理 ｜ <a class="gl" href="term-memory-bound.html">メモリ律速</a></span><strong><a class="gl" href="term-data-center-gpu.html">サーバーGPU</a>のdecode性能を見るとき、最も重要な指標はメモリ帯域です。</strong><ul style="margin:.5em 0 .1em;padding-left:1.25em;font-size:.96em"><li style="margin:.2em 0"><a class="gl" href="term-roofline.html">Roofline</a>では、batch 1は<a class="gl" href="term-memory-bound.html">メモリ律速</a>になりやすいです。</li><li style="margin:.2em 0">1トークンの時間は、重みとKVのbytes÷実効帯域が目安です。</li><li style="margin:.2em 0">次章では、この関係からGPUごとの<a class="gl" href="term-tokens-per-second.html">tok/s</a>を見積もります。</li></ul><br><span style="font-size:.85em;opacity:.75">参考: <a href="https://qiita.com/emi_ndk/items/b046e079521e36e8fbf1">Qiita「なぜLLMは遅いのか？ KV CacheとSpeculative Decodingの数学的理解」</a></span></div>
+<p class="lead">小<a class="gl" href="term-batch.html">バッチ</a>decodeでは、演算FLOPSより先に「メモリ容量」と「メモリ帯域」を確認する。容量が「載るか」を、帯域が「1トークンを何秒で出すか」を決める。</p>
+<div class="scroll">
+<table class="nolink">
+  <thead><tr><th>GPU</th><th class="num">メモリ</th><th>種別</th><th class="num">帯域(GB/s)</th><th>FP8</th><th>FP4</th><th class="num">NVLink/GPU</th><th>世代・備考</th></tr></thead>
+  <tbody>
+    <tr><td>A100 40GB</td><td class="num">40GB</td><td>HBM2</td><td class="num">1,555</td><td class="no">✗</td><td class="no">✗</td><td class="num">600</td><td>Ampere</td></tr>
+    <tr><td>A100 80GB SXM</td><td class="num">80GB</td><td>HBM2e</td><td class="num">2,039</td><td class="no">✗</td><td class="no">✗</td><td class="num">600</td><td>Ampere</td></tr>
+    <tr><td>A100 80GB PCIe</td><td class="num">80GB</td><td>HBM2e</td><td class="num">1,935</td><td class="no">✗</td><td class="no">✗</td><td class="num">600</td><td>Ampere</td></tr>
+    <tr><td>L40S</td><td class="num">48GB</td><td>GDDR6</td><td class="num">864</td><td class="yes">✓</td><td class="no">✗</td><td>無</td><td>Ada（PCIe汎用）</td></tr>
+    <tr><td>H100 SXM5</td><td class="num">80GB</td><td>HBM3</td><td class="num">3,350</td><td class="yes">✓</td><td class="no">✗</td><td class="num">900</td><td>Hopper主力</td></tr>
+    <tr><td>H100 PCIe</td><td class="num">80GB</td><td>HBM2e</td><td class="num">2,000</td><td class="yes">✓</td><td class="no">✗</td><td class="num">600</td><td>PCIe版はHBM2e</td></tr>
+    <tr><td>H100 NVL</td><td class="num">94GB</td><td>HBM3</td><td class="num">3,900</td><td class="yes">✓</td><td class="no">✗</td><td class="num">600</td><td>LLM推論向け</td></tr>
+    <tr><td>H200 SXM/NVL</td><td class="num">141GB</td><td>HBM3e</td><td class="num">4,800</td><td class="yes">✓</td><td class="no">✗</td><td class="num">900</td><td>Hopper（容量拡張）</td></tr>
+    <tr><td>GH200 96GB</td><td class="num">96GB</td><td>HBM3</td><td class="num">4,000</td><td class="yes">✓</td><td class="no">✗</td><td>C2C 900</td><td>Grace+Hopper coherent</td></tr>
+    <tr><td>GH200 144GB</td><td class="num">144GB</td><td>HBM3e</td><td class="num">4,900</td><td class="yes">✓</td><td class="no">✗</td><td>C2C 900</td><td>coherent</td></tr>
+    <tr><td>B200</td><td class="num">180GB</td><td>HBM3e</td><td class="num">8,000</td><td class="yes">✓</td><td class="yes">✓</td><td class="num">1,800</td><td>Blackwell（容量は構成依存）</td></tr>
+    <tr><td>GB200 Superchip</td><td class="num">372GB*</td><td>HBM3e</td><td class="num">16,000*</td><td class="yes">✓</td><td class="yes">✓</td><td>C2C+NVL5</td><td>*Grace+2×B200の合計値</td></tr>
+    <tr><td>GB200 NVL72</td><td class="num">13.4TB†</td><td>HBM3e</td><td class="num">1,800/GPU</td><td class="yes">✓</td><td class="yes">✓</td><td>rack 130TB/s</td><td>†72GPU合計・単一NVLinkドメイン</td></tr>
+    <tr><td>B300 (Blackwell Ultra)</td><td class="num">288GB</td><td>HBM3e</td><td class="num">8,000</td><td class="yes">✓</td><td class="yes">✓</td><td class="num">1,800</td><td>容量+50%・要検証</td></tr>
+    <tr><td>GB300 NVL72</td><td class="num">37TB†</td><td>HBM3e+LPDDR5X</td><td class="num">rack 576TB/s</td><td class="yes">✓</td><td class="yes">✓</td><td>NVL5</td><td>†fast memory合計</td></tr>
+    <tr><td>Rubin GPU <span class="tag-est">暫定</span></td><td class="num">288GB</td><td>HBM4</td><td class="num">22,000</td><td class="yes">✓</td><td class="yes">✓</td><td class="num">3,600</td><td>公式(暫定)・要検証</td></tr>
+    <tr style="opacity:.65"><td>B100</td><td class="num">—</td><td>—</td><td class="num">—</td><td>—</td><td>—</td><td>—</td><td>公式datasheet無し→非掲載</td></tr>
+    <tr><td>AMD MI300X</td><td class="num">192GB</td><td>HBM3</td><td class="num">5,325</td><td class="yes">✓</td><td class="no">✗</td><td>—</td><td>CDNA3（参考）</td></tr>
+    <tr><td>AMD MI325X</td><td class="num">256GB</td><td>HBM3e</td><td class="num">6,000</td><td class="yes">✓</td><td class="no">✗</td><td>—</td><td>CDNA3（参考）</td></tr>
+    <tr><td>AMD MI350X/MI355X</td><td class="num">288GB</td><td>HBM3e</td><td class="num">8,000</td><td class="yes">✓</td><td class="yes">✓*</td><td>—</td><td>CDNA4・*MXFP4（参考）</td></tr>
+  </tbody>
+</table>
+</div>
+<p>「帯域」は原則<a class="gl" href="term-vram.html">GPUメモリ</a>帯域。<a class="gl" href="term-superchip.html">Superchip</a>合計値（<a class="gl" href="term-gb200.html">GB200</a>の16,000）・ラック合計値・<a class="gl" href="term-nvlink.html">NVLink</a>ファブリック帯域（<a class="gl" href="term-gb200-nvl72.html">GB200 NVL72</a>の1,800/GPU・130TB/s）は対象が異なるので、同じ尺度で並べない。<strong>per-<a class="gl" href="term-vram.html">GPUメモリ</a>帯域の降順</strong>は次の通り：</p>
+<p style="font-family:var(--mono);font-size:.82rem;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 14px">
+<a class="gl" href="term-rubin.html">Rubin</a> 22,000 <span class="tag-est">暫定</span> ＞ <a class="gl" href="term-b200.html">B200</a>/<a class="gl" href="term-b300.html">B300</a>/<a class="gl" href="term-amd-mi350x-mi355x.html">MI350X/MI355X</a> 8,000 ＞ <a class="gl" href="term-amd-mi325x.html">MI325X</a> 6,000 ＞ <a class="gl" href="term-amd-mi300x.html">MI300X</a> 5,325 ＞ <a class="gl" href="term-gh200.html">GH200</a>-144 4,900 ＞ <a class="gl" href="term-h200.html">H200</a> 4,800 ＞ <a class="gl" href="term-gh200.html">GH200</a>-96 4,000 ＞ <a class="gl" href="term-h100-nvl.html">H100 NVL</a> 3,900 ＞ <a class="gl" href="term-h100.html">H100 SXM5</a> 3,350 ＞ <a class="gl" href="term-a100.html">A100</a> 80 <a class="gl" href="term-sxm.html">SXM</a> 2,039 ＞ <a class="gl" href="term-h100.html">H100 PCIe</a> 2,000 ＞ <a class="gl" href="term-a100.html">A100</a> 80 <a class="gl" href="term-pcie.html">PCIe</a> 1,935 ＞ <a class="gl" href="term-a100.html">A100</a> 40 1,555 ＞ <a class="gl" href="term-l40s.html">L40S</a> 864</p>
+
+<figure><img src="image/hw-capacity-bandwidth-scatter.png" alt="容量×帯域の散布図"><figcaption>横=メモリ容量、縦=メモリ帯域。<a class="gl" href="term-capacity-vs-bandwidth.html">容量と帯域</a>は別軸で、decodeは帯域が効く。</figcaption></figure>
+<div class="formula"><span class="l">decode の基本関係</span>decode 1トークン時間 ≈ 1ステップで読み出すバイト数 ÷ 実効メモリ帯域
+→ 「載るか」は容量が、「1トークン何秒か」は主に帯域が決める。複数GPUではNVLink帯域・MoE all-to-all・テンソル並列通信が実効値を下げる。</div>
+
+<!-- S3 -->
+<div class="sec" id="s3"><span class="cn">SECTION 3</span><h2>coherentメモリ<span class="sub">「何枚で保持するか」から「どのドメインに置くか」へ</span></h2></div>
+<p class="lead"><a class="gl" href="term-gh200.html">GH200</a>のCPU-GPU coherenceと<a class="gl" href="term-gb200.html">GB200</a>/<a class="gl" href="term-gb300.html">GB300 NVL72</a>の単一<a class="gl" href="term-nvlink.html">NVLink</a>ドメインは、巨大モデルの設計単位を「個々のGPU」から「<a class="gl" href="term-superchip.html">Superchip</a>／ラック全体」へ拡張する。</p>
+<p><a class="gl" href="term-gh200.html">GH200</a>では、Grace CPUと<a class="gl" href="term-hopper.html">Hopper</a> GPUが900GB/sの<a class="gl" href="term-nvlink-c2c.html">NVLink-C2C</a>で接続され、CPUメモリと<a class="gl" href="term-vram.html">GPUメモリ</a>をcoherentに扱える。1 <a class="gl" href="term-superchip.html">Superchip</a>当たり最大624GBのfast-accessメモリ空間を利用でき、GPU <a class="gl" href="term-hbm.html">HBM</a>に収まらない重みやKVをCPU側へ階<a class="gl" href="term-layer.html">層</a>化しつつ明示的な<a class="gl" href="term-pcie.html">PCIe</a>コピーを減らせる。ただしcoherentでも、すべてのメモリが<a class="gl" href="term-hbm.html">HBM</a>と同じ速度になるわけではない。頻繁に読む重みや現在のattention windowをどこへ置くかは引き続き重要である。</p>
+<p><a class="gl" href="term-gb200-nvl72.html">GB200 NVL72</a>では72GPUが単一の<a class="gl" href="term-nvlink.html">NVLink</a>ドメインを形成し、ラック内に合計13.4TBの<a class="gl" href="term-hbm.html">HBM</a>と130TB/sのファブリックを持つ。数TB級のモデルとKVを複数の独立サーバーへ分断せず、1ラック内の高帯域ドメインへ配置できる（最大576GPUドメインまで拡張可）。<a class="gl" href="term-gb300.html">GB300 NVL72</a>も同じ72GPUドメインで、<a class="gl" href="term-hbm.html">HBM3e</a> 20TB＋<a class="gl" href="term-lpddr5x.html">LPDDR5X</a> 17TB＝37TBのfast memoryを持つ（要検証）。</p>
+<div class="callout caution"><span class="t">誤解しやすい点</span><a class="gl" href="term-gb200-nvl72.html">NVL72</a>は「一様なローカルメモリを持つ1個のGPU」ではない。実体は72基のGPUと分散<a class="gl" href="term-hbm.html">HBM</a>であり、ローカル/リモートアクセス、<a class="gl" href="term-expert.html">Expert</a>配置、<a class="gl" href="term-tensor.html">テンソル</a>並列、collective通信の設計は残る。単一ドメイン化は通信を消すのではなく、通信を高速なラック内ファブリックへ閉じ込めやすくする技術。</div>
+
+<!-- S4 -->
+<div class="sec" id="s4"><span class="cn">SECTION 4</span><h2>FP8・FP4・BF16で速度はどう変わるか<span class="sub">decodeはバイト、prefillは演算器を見る</span></h2></div>
+<p class="lead"><a class="gl" href="term-bf-sixteen.html">BF16</a>/FP8/<a class="gl" href="term-fp4.html">FP4</a>の効果は、decodeでは主に「読み出しバイト数の削減」、prefillでは「読み出し削減＋<a class="gl" href="term-tensor.html">Tensor</a> Core演算性能」の両方として現れる。</p>
+<table>
+  <thead><tr><th>精度</th><th class="num">byte/param</th><th class="num"><a class="gl" href="term-bf-sixteen.html">BF16</a>比の読み出し量</th><th>decode(batch1)の効き</th></tr></thead>
+  <tbody>
+    <tr><td><a class="gl" href="term-bf-sixteen.html">BF16</a></td><td class="num">2.0</td><td class="num">1.00</td><td>基準</td></tr>
+    <tr><td>FP8</td><td class="num">1.0</td><td class="num">0.50</td><td>理想で最大2倍速</td></tr>
+    <tr><td><a class="gl" href="term-fp4.html">FP4</a></td><td class="num">0.5</td><td class="num">0.25</td><td>理想でFP8の2倍／<a class="gl" href="term-bf-sixteen.html">BF16</a>の4倍速</td></tr>
+  </tbody>
+</table>
+<p>小<a class="gl" href="term-batch.html">バッチ</a>、特にbatch 1のdecodeは重み帯域律速であり、<a class="gl" href="term-quantization.html">量子化</a>前後で<a class="gl" href="term-kernel.html">Kernel</a>効率が同一なら、<a class="gl" href="term-bf-sixteen.html">BF16</a>→FP8→<a class="gl" href="term-fp4.html">FP4</a>で各々最大2倍、<a class="gl" href="term-bf-sixteen.html">BF16</a>→<a class="gl" href="term-fp4.html">FP4</a>で最大4倍の理想的な速度差がある。ただしこれは重み読み出しだけが全時間を占める<a class="gl" href="term-roofline.html">Roofline</a>。実際にはscale等の<a class="gl" href="term-quantization.html">量子化</a>メタデータ、dequantize、フォーマット変換、非対応演算のfallback、通信、スケジューリングが加わるため、byte/paramの比率をそのまま実測倍率にしてはいけない。</p>
+<h3 style="font-size:1rem;color:var(--indigo);margin:1.4em 0 .3em">
+<figure><img src="image/hw-fp-bytes.png" alt="FP8/FP4/BF16のバイト比"><figcaption>BF16=2 / FP8=1 / FP4=0.5 byte/param と decode相対速度。FP4はBlackwell以降のみ。</figcaption></figure>
+FP4が使えるのはBlackwell以降（A100は例外）</h3>
+<table>
+  <thead><tr><th>世代/GPU</th><th><a class="gl" href="term-bf-sixteen.html">BF16</a></th><th>FP8</th><th><a class="gl" href="term-fp4.html">FP4</a></th></tr></thead>
+  <tbody>
+    <tr><td><a class="gl" href="term-a100.html">A100</a> (<a class="gl" href="term-ampere.html">Ampere</a>)</td><td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td></tr>
+    <tr><td><a class="gl" href="term-l40s.html">L40S</a> (<a class="gl" href="term-ada.html">Ada</a>)</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">✗</td></tr>
+    <tr><td><a class="gl" href="term-h100.html">H100</a> / <a class="gl" href="term-h200.html">H200</a> / <a class="gl" href="term-gh200.html">GH200</a> (<a class="gl" href="term-hopper.html">Hopper</a>)</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">✗</td></tr>
+    <tr><td><a class="gl" href="term-b200.html">B200</a> / <a class="gl" href="term-gb200.html">GB200</a> / <a class="gl" href="term-b300.html">B300</a> / <a class="gl" href="term-gb300.html">GB300</a> (<a class="gl" href="term-blackwell.html">Blackwell</a>)</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓ <a class="gl" href="term-fp4.html">NVFP4</a></td></tr>
+    <tr><td><a class="gl" href="term-amd-mi350x-mi355x.html">AMD MI350X</a> / <a class="gl" href="term-amd-mi350x-mi355x.html">MI355X</a> (CDNA4)</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓ <a class="gl" href="term-fp4.html">MXFP4</a></td></tr>
+  </tbody>
+</table>
+<p><a class="gl" href="term-fp4.html">FP4</a>には二つの効果がある。第一は、重みと対応する<a class="gl" href="term-activation.html">活性値</a>のバイト数を減らし、decode時のメモリ帯域負荷を下げる効果。batch 1に近いdecodeでは演算器よりメモリ帯域が先に飽和しやすいため、主効果はこちら。第二は、denseな<a class="gl" href="term-fp4.html">FP4</a> <a class="gl" href="term-tensor.html">Tensor</a> Core演算で<a class="gl" href="term-compute-bound.html">演算律速</a>部分を高速化する効果。多数の入力トークンをまとめて処理するprefillでは並列度が高く、<a class="gl" href="term-fp4.html">FP4</a> FLOPSの増加を利用しやすい。</p>
+<div class="callout caution"><span class="t">重要：KV精度は重み精度と独立</span>重みを<a class="gl" href="term-fp4.html">FP4</a>にしてもKVを<a class="gl" href="term-bf-sixteen.html">BF16</a>のまま保持すればKV読み出し量は減らない。長いコンテキストではKV読み出しが総バイトの大半を占めるため、<strong>「重みをFP8→<a class="gl" href="term-fp4.html">FP4</a>」より「KVを<a class="gl" href="term-bf-sixteen.html">BF16</a>→FP8」の方がdecode時間に効く</strong>条件がある（次章で実証）。「<a class="gl" href="term-fp4.html">FP4</a>にすれば必ず2倍速」は誤り——<a class="gl" href="term-kernel.html">量子化Kernel</a>効率・精度評価が必要で、精度維持のため一部<a class="gl" href="term-layer.html">層</a>を<a class="gl" href="term-bf-sixteen.html">BF16</a>/FP8に残せば実効byte/paramは0.5byteより大きくなる。</div>
+
+<!-- S5 -->
+<div class="sec" id="s5"><span class="cn">SECTION 5</span><h2>ケース：GLM-5.2 を1Mコンテキスト×10シーケンスで動かす<span class="sub">容量とdecode Rooflineの概算</span></h2></div>
+<p class="lead">この条件では作業領域込みで約2.1TB級が必要で、decode読み出し量の約96%をKVが占める。だから重みの<a class="gl" href="term-fp4.html">FP4</a>化よりKVのFP8化が速度に効く。</p>
+<figure><img src="image/hw-decode-roofline.png" alt="decode Roofline"><figcaption>decode 1トークン時間 ≈ 読み出しbytes ÷ <a class="gl" href="term-effective-memory-bandwidth.html">実効メモリ帯域</a>（batch1はmemory-bound）。</figcaption></figure>
+
+<p>前提（既存ブリーフ）：<a class="gl" href="term-glm-5-2.html">GLM-5.2</a> は MoE 総753B、1トークン当たりActive約40B（推定）。<a class="gl" href="term-mla-core-kv.html">MLAコアKV</a>は<a class="gl" href="term-bf-sixteen.html">BF16</a>で約89,856 bytes/token（≈87.75 KiB/token）。<a class="gl" href="term-weight-capacity.html">重み容量</a>の概算は <a class="gl" href="term-bf-sixteen.html">BF16</a>≈1,506GB / FP8≈941GB / 4bit≈470GB。<strong>容量は総753B、1ステップの読み出しはActive約40B</strong>——この2つを混同しない。</p>
+
+<div class="formula"><span class="l">① 1シーケンスのKV容量（1M, BF16）</span>89,856 bytes/token × 1,048,576 tokens = 94,220,845,056 bytes
+≒ 94.2 GB（= 87.75 GiB）
+10シーケンス → 94.2GB × 10 ≈ 942 GB（BF16 KV）／ FP8 KVなら ≈ 471 GB</div>
+
+<div class="formula"><span class="l">② 最低容量と必要GPU枚数（FP8重み+BF16 KV）</span>FP8重み 941GB + BF16 KV 942GB = 1,883GB
+＋作業領域(一時Tensor/通信/Workspace/断片化/予約) → 容量設計上 約2.1TB級
+必要枚数 ≈ ceil(2,100GB ÷ GPU容量)</div>
+
+<table>
+  <thead><tr><th>GPU</th><th class="num">容量/GPU</th><th class="num">必要枚数(≈2.1TB)</th><th class="num">公称合計</th></tr></thead>
+  <tbody>
+    <tr><td><a class="gl" href="term-a100.html">A100 80GB</a></td><td class="num">80GB</td><td class="num">27</td><td class="num">2,160GB</td></tr>
+    <tr><td><a class="gl" href="term-h100.html">H100</a> 80GB</td><td class="num">80GB</td><td class="num">27</td><td class="num">2,160GB</td></tr>
+    <tr><td><a class="gl" href="term-h200.html">H200</a> 141GB</td><td class="num">141GB</td><td class="num">16*</td><td class="num">2,256GB</td></tr>
+    <tr><td><a class="gl" href="term-b200.html">B200</a> 180GB</td><td class="num">180GB</td><td class="num">12</td><td class="num">2,160GB</td></tr>
+    <tr><td><a class="gl" href="term-b300.html">B300</a> 288GB</td><td class="num">288GB</td><td class="num">8</td><td class="num">2,304GB</td></tr>
+    <tr><td><a class="gl" href="term-gb200-nvl72.html">GB200 NVL72</a></td><td class="num">13.4TB/rack</td><td class="num">1ラック内</td><td class="num">単一ドメインに収容</td></tr>
+  </tbody>
+</table>
+<p><small>*<a class="gl" href="term-h200.html">H200</a>は15枚だと余裕15GBで作業領域を吸収できず、安全側で16枚を採用。</small></p>
+<figure><img src="image/hw-glm-capacity.png" alt="GLM-5.2の必要容量と枚数"><figcaption><a class="gl" href="term-glm-5-2.html">GLM-5.2</a>×1M×10：重み(FP8≈941GB)+KV(<a class="gl" href="term-bf-sixteen.html">BF16</a>≈942GB)≈1.9TB。必要GPU枚数の目安。</figcaption></figure>
+
+
+<h3 style="font-size:1rem;color:var(--indigo);margin:1.4em 0 .3em">decode速度（1ステップ＝10シーケンスへ各1トークン）</h3>
+<div class="formula"><span class="l">③ 1ステップの読み出し量と時間</span>1ステップ読み出し ≈ Active重み + 全シーケンスのKV
+  FP8 Active重み = 40e9 × 1byte = 40GB／FP4 = 20GB／BF16 = 80GB
+  KV(BF16) = 942GB／KV(FP8) = 471GB
+基準(FP8重み+BF16 KV) = 40 + 942 = 982GB/step  → KVが約96%（KV支配）
+
+実効総帯域 = (GPU枚数 × per-GPU帯域) × 効率η   ［η=0.6を中心、0.5〜0.7を感度幅］
+1ステップ時間 = 982GB ÷ 実効総帯域
+tok/s/シーケンス = 1 ÷ ステップ時間 ／ 集計tok/s = 10 ÷ ステップ時間</div>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>構成</th><th class="num">枚数</th><th class="num">per-GPU帯域</th><th class="num">実効総帯域(<a class="gl" href="term-efficiency-eta.html">η</a>0.6)</th><th class="num">step時間</th><th class="num"><a class="gl" href="term-tokens-per-second.html">tok/s</a>/seq</th><th class="num">集計<a class="gl" href="term-tokens-per-second.html">tok/s</a></th></tr></thead>
+  <tbody>
+    <tr><td><a class="gl" href="term-h100.html">H100 SXM5</a></td><td class="num">27</td><td class="num">3,350</td><td class="num">54,270</td><td class="num">18.1ms</td><td class="num">55.3</td><td class="num">552.6</td></tr>
+    <tr><td><a class="gl" href="term-h200.html">H200</a></td><td class="num">16</td><td class="num">4,800</td><td class="num">46,080</td><td class="num">21.3ms</td><td class="num">46.9</td><td class="num">469.2</td></tr>
+    <tr><td><a class="gl" href="term-b200.html">B200</a></td><td class="num">12</td><td class="num">8,000</td><td class="num">57,600</td><td class="num">17.0ms</td><td class="num">58.7</td><td class="num">586.6</td></tr>
+    <tr><td><a class="gl" href="term-b300.html">B300</a></td><td class="num">8</td><td class="num">8,000</td><td class="num">38,400</td><td class="num">25.6ms</td><td class="num">39.1</td><td class="num">391.0</td></tr>
+    <tr><td><a class="gl" href="term-gb200-nvl72.html">GB200 NVL72</a></td><td class="num">72</td><td class="num">1,800†</td><td class="num">77,760</td><td class="num">12.6ms</td><td class="num">79.2</td><td class="num">791.9</td></tr>
+  </tbody>
+</table>
+</div>
+<p><small>単位 <a class="gl" href="term-data-rate-units.html">GB/s</a>。<span class="tag-est">理論上限・概算</span> <a class="gl" href="term-efficiency-eta.html">η</a>=0.6。<a class="gl" href="term-efficiency-eta.html">η</a>=0.5〜0.7で <a class="gl" href="term-tokens-per-second.html">tok/s</a>/seq は概ね ±15%（例: <a class="gl" href="term-h200.html">H200</a>×16 で 39.1〜54.7、<a class="gl" href="term-gb200-nvl72.html">GB200 NVL72</a> で 66.0〜92.4）。†<a class="gl" href="term-gb200-nvl72.html">GB200 NVL72</a>の1,800は<a class="gl" href="term-nvlink.html">NVLink</a>ファブリック側の指標で、<a class="gl" href="term-b200.html">B200</a>の<a class="gl" href="term-hbm.html">HBM</a> 8,000とは尺度が異なる（実機は<a class="gl" href="term-hbm.html">HBM</a>/<a class="gl" href="term-nvlink.html">NVLink</a>/通信の最も狭い経路が律速＝要検証）。</small></p>
+<div class="callout caution"><span class="t">容量最小 ≠ 速度最大</span><a class="gl" href="term-b300.html">B300</a>×8 が <a class="gl" href="term-b200.html">B200</a>×12 より遅いのは、<a class="gl" href="term-b300.html">B300</a>世代が遅いからではない。両者をper-GPU 8,000GB/sとし、容量を満たす最小枚数で組んだため、8枚の<a class="gl" href="term-b300.html">B300</a>は12枚の<a class="gl" href="term-b200.html">B200</a>より理論総帯域が小さくなる。速度を上げるには容量最小構成より多い枚数が要る。</div>
+
+<h3 style="font-size:1rem;color:var(--indigo);margin:1.4em 0 .3em">KV支配の実証（同じ B200×12 で比較）</h3>
+<table>
+  <thead><tr><th>設定</th><th class="num">step読み出し</th><th class="num"><a class="gl" href="term-tokens-per-second.html">tok/s</a>/seq</th><th class="num">基準比</th></tr></thead>
+  <tbody>
+    <tr><td>基準（FP8重み＋<a class="gl" href="term-qwen-kv-example.html">BF16 KV</a>）</td><td class="num">982GB</td><td class="num">58.7</td><td class="num">1.00×</td></tr>
+    <tr><td><strong>KVをFP8化</strong>（FP8重み＋<a class="gl" href="term-fp-eight-kv-cache.html">FP8 KV</a>）</td><td class="num">511GB</td><td class="num">112.7</td><td class="num">約1.92×</td></tr>
+    <tr><td>重みを<a class="gl" href="term-fp4.html">FP4</a>化（<a class="gl" href="term-fp4.html">FP4</a>重み＋<a class="gl" href="term-qwen-kv-example.html">BF16 KV</a>）</td><td class="num">962GB</td><td class="num">59.9</td><td class="num">約1.02×</td></tr>
+  </tbody>
+</table>
+<p>同じ<a class="gl" href="term-b200.html">B200</a>×12でも、<strong>KVを<a class="gl" href="term-bf-sixteen.html">BF16</a>→FP8にすると約1.92倍（≒2倍）速くなる</strong>のに対し、重みをFP8→<a class="gl" href="term-fp4.html">FP4</a>にしても総読み出しは982→962GBで<strong>改善は約2%</strong>にとどまる。<a class="gl" href="term-fp4.html">FP4</a>はprefill（<a class="gl" href="term-compute-bound.html">演算律速</a>）には有効だが、1Mコンテキスト×10<a class="gl" href="term-sequence.html">シーケンス</a>のdecodeでは、重み精度よりKV精度が支配的——という結論になる。</p>
+<figure><img src="image/hw-kv-dominance.png" alt="KV支配"><figcaption>decode 1ステップ読み出し982GBの約96%が<a class="gl" href="term-kv-cache.html">KVキャッシュ</a>（KV支配）。</figcaption></figure>
+
+
+<h3 style="font-size:1rem;color:var(--indigo);margin:1.6em 0 .3em">KVが大きすぎる問題への対策（運用効率の最前線）</h3>
+<figure><img src="image/hw-turboquant.png" alt="KV量子化(TurboQuant)"><figcaption><a class="gl" href="term-kv-cache.html">KVキャッシュ</a>を3bit級へ圧縮するKV<a class="gl" href="term-quantization.html">量子化</a>（<a class="gl" href="term-turboquant.html">TurboQuant</a>等）。</figcaption></figure>
+
+<figure><img src="image/hw-kv-offload.png" alt="KVオフロード"><figcaption>KVを GPU <a class="gl" href="term-hbm.html">HBM</a> → CPU RAM → SSD/ディスク へ退避（大容量メモリサーバ）。</figcaption></figure>
+
+<div class="callout fact kv-frontier"><span class="t">最前線 ｜ KV<a class="gl" href="term-quantization.html">量子化</a></span><strong><a class="gl" href="term-turboquant.html">TurboQuant</a>は、KVをFP8で約半分にする方法より先を狙う、Google Researchの圧縮技術です。</strong><ul style="margin:.5em 0 .1em;padding-left:1.25em;font-size:.96em"><li style="margin:.2em 0">ランダム直交回転、Lloyd-Max<a class="gl" href="term-quantization.html">量子化</a>、1bit QJL補正を使います。</li><li style="margin:.2em 0">再学習なしでオンライン適用し、3bit級でも精度維持を狙います。</li><li style="margin:.2em 0">公式blogは3bitで損失ほぼなし、論文abstractは3.5bitで品質中立です。</li><li style="margin:.2em 0">表現差の条件確認が必要で、目的は知能向上でなく推論・運用の効率化です。</li></ul><br><span style="font-size:.85em;opacity:.75">参考: <a href="https://arxiv.org/abs/2504.19874">arXiv:2504.19874</a> / <a href="https://research.google/blog/turboquant-redefining-ai-efficiency-with-extreme-compression/">Google Research blog</a> / <a href="https://qiita.com/kai_kou/items/a411215806322af68a73">Qiita</a></span></div>
+<div class="callout caution kv-frontier"><span class="t">別解 ｜ <a class="gl" href="term-kv-offload.html">KVオフロード</a></span><strong><a class="gl" href="term-glm-5-2.html">GLM-5.2</a>のようにKVが<a class="gl" href="term-vram.html">VRAM</a>を超える場合は、<a class="gl" href="term-hbm.html">HBM</a>からCPU RAMやSSD・ディスクへ退避できます。</strong><ul style="margin:.5em 0 .1em;padding-left:1.25em;font-size:.96em"><li style="margin:.2em 0">大容量メモリを備えたサーバーで動かす選択肢です。</li><li style="margin:.2em 0">転送帯域が律速となるため、<a class="gl" href="term-tokens-per-second.html">tok/s</a>は下がります。</li><li style="margin:.2em 0">Llama2 7B・2048では、<a class="gl" href="term-prefetch.html">prefetch</a>併用でも約3〜5倍低速です。</li><li style="margin:.2em 0">1M×10・約942GBも候補ですが、速度はモデル、文脈、<a class="gl" href="term-pcie.html">PCIe</a>、RAM、SSD次第です。</li></ul><br><span style="font-size:.85em;opacity:.75">参考: <a href="https://blog.qualiteg.com/how_to_off_load_kv_cache_to_cpu_to_ssd_to_disk/">qualiteg blog</a></span></div>
+
+<!-- S6 -->
+<div class="sec" id="s6"><span class="cn">SECTION 6</span><h2>まとめと注意<span class="sub">仕様値は入口、最終判断は実測</span></h2></div>
+<p><a class="gl" href="term-data-center-gpu.html">サーバーGPU</a>選定では、①モデルを保持できる容量、②decodeを支える<a class="gl" href="term-effective-memory-bandwidth.html">実効メモリ帯域</a>、③複数GPUを束ねる接続、④利用可能な低精度<a class="gl" href="term-kernel.html">Kernel</a>、の四点を分けて評価する。<a class="gl" href="term-a100.html">A100</a>→<a class="gl" href="term-h100-h200.html">H100/H200</a>ではFP8対応と<a class="gl" href="term-hbm.html">HBM</a>帯域向上が大きく、<a class="gl" href="term-b200.html">B200</a>/<a class="gl" href="term-b300.html">B300</a>以降では<a class="gl" href="term-fp4.html">FP4</a>が加わって<a class="gl" href="term-weight-capacity.html">重み容量</a>とdecode帯域負荷をさらに減らせる。ただし長大コンテキストではKVが支配的になり、重みの<a class="gl" href="term-fp4.html">FP4</a>化だけでは大きなdecode改善を得られない。</p>
+<p>本ケース（<a class="gl" href="term-glm-5-2.html">GLM-5.2</a> ×1M×10）では、FP8重み＋<a class="gl" href="term-qwen-kv-example.html">BF16 KV</a>だけで約1,883GB、作業領域込みで約2.1TB級が必要で、decode読み出し982GB/stepの約96%がKV。この条件では<a class="gl" href="term-fp-eight-kv-cache.html">FP8 KV</a>が重み<a class="gl" href="term-fp4.html">FP4</a>より強い最適化レバーになる。また、容量を満たす最小枚数が最速構成とは限らない（<a class="gl" href="term-b300.html">B300</a>×8 vs <a class="gl" href="term-b200.html">B200</a>×12）。コスト・消費電力・ラック密度・通信量・可用性を含めたシステム全体で比較する。</p>
+<div class="callout caution"><span class="t">この数値は<a class="gl" href="term-roofline.html">Roofline</a>・概算（実測ではない）</span>decode値は「読み出しバイト ÷ 実効総帯域」の理論上限。MoEで異なる<a class="gl" href="term-expert.html">Expert</a>が選ばれる追加読み出し、tensor/expert parallel、all-to-all、attention <a class="gl" href="term-kernel.html">Kernel</a>、<a class="gl" href="term-quantization.html">量子化</a>/dequantize、断片化、<a class="gl" href="term-scheduler.html">スケジューラ</a>、リクエスト間batchingで実測は低下する。<a class="gl" href="term-efficiency-eta.html">η</a>=0.6も仮定。対象モデル・重み精度・KV精度・コンテキスト長・同時数・prefill/decode比を固定し、実際の<a class="gl" href="term-kernel.html">量子化Kernel</a>と分散構成で実測すること。</div>
+<div class="callout fact"><span class="t">AMD代替</span><a class="gl" href="term-amd-mi300x.html">MI300X</a>(192GB/5,325GB/s)、<a class="gl" href="term-amd-mi325x.html">MI325X</a>(256GB/6,000GB/s)、<a class="gl" href="term-amd-mi350x-mi355x.html">MI350X/MI355X</a>(288GB/8,000GB/s、CDNA4で<a class="gl" href="term-fp4.html">MXFP4</a>)も有力候補。ただしFP8/<a class="gl" href="term-fp4.html">FP4</a>モデルの互換性、<a class="gl" href="term-kernel.html">量子化Kernel</a>、通信ライブラリ、MoE all-to-allの実効性能は要検証。<a class="gl" href="term-blackwell-ultra.html">Blackwell Ultra</a>(<a class="gl" href="term-b300.html">B300</a>/<a class="gl" href="term-gb300.html">GB300</a>)は構成依存で要検証、<a class="gl" href="term-rubin.html">Rubin</a>は公式(暫定)で現行GPUと同じ確度では使わない。</div>
+
+</main>
+
+<footer>
+  <p>勉強会資料・補章「<a class="gl" href="term-data-center-gpu.html">サーバーGPU</a>編」／ 本文・計算：Oracle執筆、GPU諸元：web調査（2026年6月時点、公式datasheet優先）。価格・将来世代は <span class="tag-est">推定/暫定</span> を明示。発注前に各社の最新スペック・価格で要検証。</p>
+  <p>本編：<a href="index4.html">技術者向け</a>・<a href="index5.html">デザイナー向け</a>・<a href="index6.html">経営者向け</a> ／ <a href="glossary.html">用語集</a></p>
+</footer>
+</body>
+</html>

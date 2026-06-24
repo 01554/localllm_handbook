@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI基盤・意思決定ブリーフ（経営者向け）</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --ink:#1b2733; --soft:#5b6b7c; --line:#dde4ec; --card:#ffffff;
+    --navy:#1f3a5f; --navy-bg:#e9eef5; --green:#2c8a63; --green-bg:#e5f4ec;
+    --amber:#bd7a16; --amber-bg:#fbf1dd; --red:#c0444a; --red-bg:#fbe9ea;
+    --shadow:0 2px 16px rgba(27,39,51,.07);
+    --mono:"SFMono-Regular",Consolas,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",sans-serif;
+    line-height:1.85;font-size:16px}
+  a{color:var(--navy)}
+  header.hero{padding:74px 24px 48px;background:linear-gradient(180deg,#e7edf4,transparent);border-bottom:1px solid var(--line)}
+  header.hero .wrap{max-width:1000px;margin:0 auto}
+  .kicker{letter-spacing:.28em;font-size:.74rem;color:var(--navy);font-weight:800}
+  header.hero h1{font-size:clamp(1.7rem,4vw,2.7rem);margin:.3em 0 .15em;color:var(--navy)}
+  header.hero p{color:var(--soft);max-width:740px;margin:.4em 0;font-size:1.04rem}
+  nav.toc{position:sticky;top:0;z-index:20;background:rgba(245,247,250,.95);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);padding:11px 16px;font-size:.8rem;overflow-x:auto;white-space:nowrap}
+  nav.toc a{color:var(--soft);text-decoration:none;margin-right:13px}
+  nav.toc a:hover{color:var(--navy)}
+  main{max-width:1000px;margin:0 auto;padding:8px 22px 80px}
+  .chapter{margin-top:50px;padding-top:22px;border-top:2px solid var(--navy)}
+  .chapter:first-of-type{border-top:none}
+  .chapter .cn{font:800 .74rem/1 var(--mono);color:var(--navy);letter-spacing:.12em}
+  .chapter h2{font-size:clamp(1.4rem,3.2vw,1.95rem);margin:.2em 0 .2em}
+  section.sec{padding:22px 0;border-bottom:1px solid var(--line)}
+  section.sec h3{font-size:1.1rem;margin:.2em 0 .15em;color:var(--ink)}
+  section.sec h3 .sub{display:block;font-size:.78rem;color:var(--soft);font-weight:600;margin-top:2px}
+  .lead{font-size:1.04rem;font-weight:700;color:var(--navy);background:var(--navy-bg);
+    border-radius:10px;padding:12px 16px;margin:.6em 0 1em;border-left:5px solid var(--navy)}
+  p{margin:.7em 0}
+  figure{margin:1.2em 0;text-align:center}
+  figure img{max-width:min(100%,640px);display:block;margin-inline:auto;border-radius:12px;border:1px solid var(--line);background:#fff;box-shadow:var(--shadow)}
+  figure figcaption{font-size:.83rem;color:var(--soft);margin-top:.4em}
+  table{width:100%;border-collapse:collapse;margin:1em 0;font-size:.87rem;background:var(--card);
+    border-radius:11px;overflow:hidden;box-shadow:var(--shadow)}
+  th,td{padding:.55em .8em;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  thead th{background:var(--navy-bg);color:var(--navy);font-size:.8rem}
+  tbody tr:last-child td{border-bottom:none}
+  td.num,th.num{text-align:right;font-family:var(--mono)}
+  .decision{background:var(--green-bg);border-radius:10px;padding:13px 17px;margin:1em 0;border-left:5px solid var(--green);font-size:.93rem}
+  .decision .t{font-weight:800;font-size:.7rem;letter-spacing:.1em;color:var(--green);display:block;margin-bottom:.2em}
+  .risk{background:var(--red-bg);border-radius:10px;padding:13px 17px;margin:1em 0;border-left:5px solid var(--red);font-size:.93rem}
+  .risk .t{font-weight:800;font-size:.7rem;letter-spacing:.1em;color:var(--red);display:block;margin-bottom:.2em}
+  .est{display:inline-block;font:800 .64rem/1 var(--mono);background:var(--amber-bg);color:var(--amber);padding:.28em .5em;border-radius:6px}
+  footer{max-width:1000px;margin:0 auto;padding:30px 22px 80px;color:var(--soft);font-size:.83rem}
+a.gl{color:inherit;text-decoration:underline dotted;text-underline-offset:2px;text-decoration-color:#b3b9c6}a.gl:hover{text-decoration-style:solid;text-decoration-color:currentColor}</style>
+</head>
+<body>
+<a href="glossary.html" class="glnav">📖 用語集</a>
+<header class="hero"><div class="wrap">
+  <div class="kicker">勉強会 / index6 — 経営・意思決定者向け</div>
+  <h1>AI基盤・意思決定ブリーフ</h1>
+  <p>「どのモデルが強いか」ではなく、容量・速度・記憶・Reasoning・<a class="gl" href="term-harness.html">ハーネス</a>を、コスト・リスク・運用責任の意思決定として整理する。価格は2026年6月時点の概算（<span class="est">推定</span>・要検証）。</p>
+</div></header>
+
+<nav class="toc">
+  <a href="#ch1">1 容量=固定費</a><a href="#ch2">2 速さ=SLA</a><a href="#ch3">3 帯域投資</a><a href="#ch4">4 HW選定</a>
+  <a href="#ch5">5 運用責任</a><a href="#ch6">6 データ統制</a><a href="#ch7">7 Reasoning</a><a href="#ch8">8 自前vsAPI</a>
+  <a href="#ch9">9 Fugu/Fusion</a><a href="#ch10">10 投資配分</a>
+</nav>
+
+<main>
+
+<!-- CH1 -->
+<div class="chapter" id="ch1"><span class="cn">CHAPTER 1</span><h2>載るか ＝ 容量という固定費</h2></div>
+
+<section class="sec">
+  <h3>容量は固定費を決める<span class="sub">モデル本体と量子化</span></h3>
+  <p class="lead">モデル選定の第一条件は、性能評価より先に「必要なメモリへ安全に載るか」を確認すること。</p>
+  <p>モデルの<a class="gl" href="term-weight-capacity.html">重み容量</a>は概算で「パラメータ数 × <a class="gl" href="term-quantization.html">量子化</a>ビット数 ÷ 8」で決まります。32Bは16bitで約64GB、4bitで約16GB、70Bはそれぞれ約140GB・35GB、753Bは4bitでも約376.5GBです。これは重みだけの<a class="gl" href="term-theoretical-vs-measured.html">理論値</a>で、実際には<a class="gl" href="term-quantization.html">量子化</a>情報・作業領域・通信バッファ・<a class="gl" href="term-activation.html">Activation</a>・断片化の余裕が加わります。したがって「理論35GBだから40GB GPUで運用できる」という判断は危険です。<a class="gl" href="term-quantization.html">量子化</a>は設備費を抑える手段ですが、無条件に速度や業務品質を改善するものではなく、重みを4bitにしても<a class="gl" href="term-kv-cache.html">KVキャッシュ</a>まで自動で4bitになるわけではありません。<a class="gl" href="term-quantization.html">量子化</a>方式は調達の前提として固定せず、対象業務の成功率・速度・同時利用数を同条件で測ってから決めるべきです。</p>
+</section>
+
+<section class="sec">
+  <h3>MoEは計算費を抑えても保管費を消さない<span class="sub">Dense と MoE</span></h3>
+  <p class="lead">MoEは「容量削減策」ではなく、「大きな能力を、<a class="gl" href="term-flops-per-token.html">トークン当たり演算量</a>を抑えて使う設計」。</p>
+  <p><a class="gl" href="term-dense-model.html">Dense</a>は原則全パラメータが各トークンの計算に使われます。MoEでは、<a class="gl" href="term-total-vs-active-parameters.html">総パラメータ数</a>が格納容量に、<a class="gl" href="term-active-parameters.html">Active parameters</a>が各トークンの演算量に関係します。GLM系では約40B相当だけを各トークンで使う構成でも、格納には753B分の重みが必要です。演算量が40Bモデルに近く見えても、設備容量は753Bとして準備し、複数GPUへ分散すれば<a class="gl" href="term-expert.html">Expert</a>間通信や負荷の偏りも加わるため、<a class="gl" href="term-dense-model.html">Dense</a> 40Bと同じ速度にもなりません。調達計画では総パラメータを、性能計画では<a class="gl" href="term-active-parameters.html">Active parameters</a>とGPU間通信を別々に評価します。</p>
+</section>
+
+<section class="sec">
+  <h3>長いコンテキストは無料の余白ではない<span class="sub">コンテキストとKVキャッシュ</span></h3>
+  <p class="lead"><a class="gl" href="term-advertised-context.html">公称コンテキスト</a>長は製品の上限値であり、そのまま日常運用の標準値にしない。</p>
+  <p>コンテキストには指示・ツール定義・履歴・要約・RAG文書・<a class="gl" href="term-long-term-memory.html">長期記憶</a>・入力・ツール結果・出力・Reasoningまで含まれ、入力だけで上限を使い切ることはできません。運用では、公称（Advertised）／推論基盤の設定（Serving）／業務アプリが認める上限（Application）を分けます。1M対応でも「常に1Mを渡せる」「100人が同時に1Mを使える」を意味しません。<a class="gl" href="term-kv-cache.html">KVキャッシュ</a>はリクエストごとの作業メモリで、同時利用数と会話長に比例します。Qwen3-32B（<a class="gl" href="term-bf-sixteen.html">BF16</a>）は8Kで約2GiB、32Kで約8GiB。32Kが10本同時なら約80GiB。<a class="gl" href="term-glm-5-2.html">GLM-5.2</a>の圧縮方式でも1Mは1<a class="gl" href="term-sequence.html">シーケンス</a>のコアだけで約87.75GiB。容量計画は登録ユーザー数ではなく、ピーク時に同時生成される<a class="gl" href="term-sequence.html">シーケンス</a>数と平均トークン長で行います。</p>
+  <figure>
+    <img src="image/idx6-capacity-fixed-cost.png" alt="容量＝固定費。重み＋KV＋作業領域が常に必要">
+    <figcaption>容量は「載るか」を決める固定費。1人でも全重み常駐が必要で、台数は人数に比例して減らない。</figcaption>
+  </figure>
+</section>
+
+<!-- CH2 -->
+<div class="chapter" id="ch2"><span class="cn">CHAPTER 2</span><h2>速さ ＝ 体感とSLA</h2></div>
+
+<section class="sec">
+  <h3>速さはSLAとして定義する<span class="sub">tok/secを待ち時間へ翻訳する</span></h3>
+  <p class="lead"><a class="gl" href="term-tokens-per-second.html">tok/sec</a>は技術指標ではなく、利用者が何秒待つかを決めるサービス指標。</p>
+  <table>
+    <thead><tr><th class="num">速度</th><th class="num">トークン間</th><th class="num">600トークン生成(<a class="gl" href="term-decode.html">Decode</a>のみ)</th></tr></thead>
+    <tbody>
+      <tr><td class="num">7 <a class="gl" href="term-tokens-per-second.html">tok/s</a></td><td class="num">約143ms</td><td class="num">約85.6秒</td></tr>
+      <tr><td class="num">25 <a class="gl" href="term-tokens-per-second.html">tok/s</a></td><td class="num">40ms</td><td class="num">約24秒</td></tr>
+      <tr><td class="num">50 <a class="gl" href="term-tokens-per-second.html">tok/s</a></td><td class="num">20ms</td><td class="num">約12秒</td></tr>
+      <tr><td class="num">100 <a class="gl" href="term-tokens-per-second.html">tok/s</a></td><td class="num">10ms</td><td class="num">約6秒</td></tr>
+    </tbody>
+  </table>
+  <p>この前に<a class="gl" href="term-queue.html">Queue</a>待ちと<a class="gl" href="term-prefill.html">Prefill</a>が加わるため、実<a class="gl" href="term-latency.html">応答時間</a>はさらに延びます。「50 <a class="gl" href="term-tokens-per-second.html">tok/s</a>を達成」だけでは不十分で、想定出力長を掛けて業務上許容できる秒数へ翻訳します。対話型・文書生成・長時間エージェントを同じ速度基準で扱わず、用途ごとに「最初の表示までの時間」と「完了までの時間」を別々のSLAとして定義します。</p>
+  <figure>
+    <img src="image/idx6-latency-sla.png" alt="Queue→Prefill→最初の表示→生成完了 のSLA分解">
+    <figcaption>体感は <a class="gl" href="term-queue.html">Queue</a>＋<a class="gl" href="term-prefill.html">Prefill</a>（最初の表示）と <a class="gl" href="term-decode.html">Decode</a>（完了）に分かれる。用途別にSLAを定義する。</figcaption>
+  </figure>
+</section>
+
+<section class="sec">
+  <h3>全体処理量は個人の体感を保証しない<span class="sub">PrefillとDecode／Aggregate</span></h3>
+  <p>長い入力を読む時間（<a class="gl" href="term-prefill.html">Prefill</a>）と、回答を一語ずつ生成する時間（<a class="gl" href="term-decode.html">Decode</a>）は別管理です。長文資料を毎回入力するシステムは<a class="gl" href="term-prefill.html">Prefill</a>が、短い入力から長い分析を出すシステムは<a class="gl" href="term-decode.html">Decode</a>が遅くなります。改善の投資先も一律ではなく、<a class="gl" href="term-prefill.html">Prefill</a>なら履歴圧縮・文書選別・<a class="gl" href="term-prompt.html">Prompt</a> Cache、<a class="gl" href="term-decode.html">Decode</a>ならモデル規模・<a class="gl" href="term-quantization.html">量子化</a>・帯域・Reasoning量を見直します。また、サーバー全体の<a class="gl" href="term-tokens-per-second.html">tok/s</a>が高くても各利用者が速いとは限りません。10人×25 <a class="gl" href="term-tokens-per-second.html">tok/s</a>で全体250 <a class="gl" href="term-tokens-per-second.html">tok/s</a>でも、長いコンテキストの混在や<a class="gl" href="term-queue.html">Queue</a>で均等配分は保証されません。意思決定者はピーク時の全体処理量に加え、各利用者の最初の表示・完了・同時実行時の速度低下を確認すべきです。</p>
+</section>
+
+<!-- CH3 -->
+<div class="chapter" id="ch3"><span class="cn">CHAPTER 3</span><h2>容量と速度は別の投資</h2></div>
+<div class="decision mb-col"><span class="t">原理 ｜ <a class="gl" href="term-memory-bound.html">メモリ律速</a></span><strong>LLMのdecodeでは、演算性能よりメモリ帯域と読出量がスループットとROIを左右します。</strong><ul style="margin:.5em 0 .1em;padding-left:1.25em;font-size:.96em"><li style="margin:.2em 0">GPU調達ではFLOPSだけでなく、実効帯域も確認します。</li><li style="margin:.2em 0"><a class="gl" href="term-quantization.html">量子化</a>やKV圧縮で、転送量を減らせるかも見ます。</li><li style="margin:.2em 0">continuous batchingは全体のスループットを高めます。</li><li style="margin:.2em 0">各ユーザーの<a class="gl" href="term-tokens-per-second.html">tok/s</a>は、別の指標として確認します。</li></ul><br><span style="font-size:.85em;opacity:.75">参考: <a href="https://qiita.com/emi_ndk/items/b046e079521e36e8fbf1">Qiita「なぜLLMは遅いのか？ KV CacheとSpeculative Decodingの数学的理解」</a></span></div>
+
+<section class="sec">
+  <h3>メモリ帯域という制約<span class="sub">容量と速度を分けて調達要件にする</span></h3>
+  <p class="lead">モデルが載ることと、実用的な速度で動くことは別問題。</p>
+  <p>容量はモデル・KV・作業領域を保持できるかを決め、特に<a class="gl" href="term-batch-one.html">Batch 1</a>の<a class="gl" href="term-decode.html">Decode</a>では、毎トークン読み出す重みやKVに対しメモリ帯域が足りるかが速度を左右します。短いコンテキストの<a class="gl" href="term-dense-model.html">Dense</a>なら理論速度は「実効帯域÷<a class="gl" href="term-weight-capacity.html">重み容量</a>」、長いコンテキストでは分母にKV読み出しが加わります。これは予測値ではなく帯域から見た上限ですが、「容量は大きいが帯域が低い機器」と「容量は小さいが帯域が高い機器」を分ける初期スクリーニングに有効です。経営上の含意は、総演算性能や宣伝FLOPSだけで購入判断しないこと。調達要件にメモリ容量とメモリ帯域を別項目として明示します。</p>
+  <figure>
+    <img src="image/idx6-capacity-bandwidth.png" alt="容量(倉庫)と帯域(搬入口)は別投資">
+    <figcaption>容量＝載るか、帯域＝速いか。調達要件で別項目として明示する。</figcaption>
+  </figure>
+  <div class="risk"><span class="t">注意</span>長いコンテキストは容量と速度を同時に消費する。<a class="gl" href="term-application-context.html">Application context</a>を大きく開放すると一人の処理がメモリを長時間占有し、他者の待ち時間へ波及する。コンテキスト長はモデル設定ではなく、コストとSLAを制御する業務ポリシー。</div>
+</section>
+
+<section class="sec">
+  <h3>理論値は候補選定、購入承認は実測<span class="sub">RooflineとBenchmark</span></h3>
+  <p>帯域から求めた<a class="gl" href="term-tokens-per-second.html">tok/s</a>は候補を絞る天井値であり、予算承認の最終値ではありません。実速度には演算性能・実効帯域・GPU間通信・<a class="gl" href="term-kernel-launch-overhead.html">Kernel起動</a>・<a class="gl" href="term-dequantization.html">量子化解除</a>・<a class="gl" href="term-runtime.html">Runtime</a>実装が影響し、MoEでは<a class="gl" href="term-expert.html">Expert</a> routingや<a class="gl" href="term-all-to-all.html">All-to-All通信</a>も加わります。2026年5月の研究例では、7〜8B <a class="gl" href="term-bf-sixteen.html">BF16</a>で<a class="gl" href="term-l-four.html">L4</a>が解析上限の約81%に達した一方、<a class="gl" href="term-h100.html">H100</a>は約27%、<a class="gl" href="term-h100.html">H100</a>は<a class="gl" href="term-cuda-graphs.html">CUDA Graphs</a>で約1.26倍改善という報告があり、高速GPUほど<a class="gl" href="term-runtime-overhead.html">固定オーバーヘッド</a>の影響が相対的に大きくなり得ます。<a class="gl" href="term-int-four-q-four.html">INT4</a>も<a class="gl" href="term-quantization.html">量子化</a>しただけで所定倍率で速くなるとは限りません。購入承認は、モデル・<a class="gl" href="term-quantization.html">量子化</a>・<a class="gl" href="term-runtime.html">Runtime</a>・コンテキスト長・出力長・<a class="gl" href="term-concurrent-sequence.html">同時実行数</a>を固定した実ワークロードのキャパシティ試験を条件にします。</p>
+</section>
+
+<!-- CH4 -->
+<div class="chapter" id="ch4"><span class="cn">CHAPTER 4</span><h2>ハードウェア選定の判断</h2></div>
+
+<section class="sec">
+  <h3>最大値ではなくボトルネックで選ぶ<span class="sub">容量×帯域のトレードオフ</span></h3>
+  <p class="lead">選定の起点は製品名ではなく、「どの<a class="gl" href="term-quantization.html">量子化</a>のモデルを・どのコンテキスト長で・何本同時に・何秒の待ち時間で」。</p>
+  <table>
+    <thead><tr><th>機器</th><th class="num">容量</th><th class="num">帯域</th><th>性格</th></tr></thead>
+    <tbody>
+      <tr><td><a class="gl" href="term-rtx-five-zero-nine-zero.html">RTX 5090</a></td><td class="num">32 GB</td><td class="num">1,792 <a class="gl" href="term-data-rate-units.html">GB/s</a></td><td>高速だが容量制約が先に来る</td></tr>
+      <tr><td><a class="gl" href="term-rtx-three-zero-nine-zero.html">RTX 3090</a></td><td class="num">24 GB</td><td class="num">936 <a class="gl" href="term-data-rate-units.html">GB/s</a></td><td>小規模・限定的同時実行向け</td></tr>
+      <tr><td><a class="gl" href="term-a100.html">A100 80GB</a> <a class="gl" href="term-sxm.html">SXM</a></td><td class="num">80 GB</td><td class="num">2,039 <a class="gl" href="term-data-rate-units.html">GB/s</a></td><td><a class="gl" href="term-capacity-vs-bandwidth.html">容量と帯域</a>のバランス（共有基盤向け）</td></tr>
+      <tr><td><a class="gl" href="term-dgx-spark.html">DGX Spark</a></td><td class="num">128 GB</td><td class="num">273 <a class="gl" href="term-data-rate-units.html">GB/s</a></td><td>大容量・載ること優先（<a class="gl" href="term-decode.html">Decode</a>は制約）</td></tr>
+      <tr><td><a class="gl" href="term-mac-studio-m-three-ultra.html">Mac Studio M3 Ultra</a></td><td class="num">512 GB</td><td class="num">819 <a class="gl" href="term-data-rate-units.html">GB/s</a></td><td>超大容量・速度は中間</td></tr>
+    </tbody>
+  </table>
+  <p>32B 4bitの帯域上の天井値は<a class="gl" href="term-rtx-five-zero-nine-zero.html">RTX 5090</a>で約112 <a class="gl" href="term-tokens-per-second.html">tok/s</a>、<a class="gl" href="term-rtx-three-zero-nine-zero.html">RTX 3090</a>で約58.5 <a class="gl" href="term-tokens-per-second.html">tok/s</a>。ただし32Kコンテキストでは重み16GB＋KV約8GiB超で<a class="gl" href="term-rtx-three-zero-nine-zero.html">RTX 3090</a>は<a class="gl" href="term-out-of-memory.html">容量不足</a>、<a class="gl" href="term-rtx-five-zero-nine-zero.html">RTX 5090</a>も残り約7GBで<a class="gl" href="term-concurrent-sequence.html">同時シーケンス</a>が制限されます。70B 4bit（理論35GB）の天井値は<a class="gl" href="term-a100.html">A100</a> <a class="gl" href="term-sxm.html">SXM</a>で約58.3、<a class="gl" href="term-dgx-spark.html">DGX Spark</a>で約7.8、<a class="gl" href="term-mac-studio-m-three-ultra.html">Mac Studio M3 Ultra</a>で約23.4 <a class="gl" href="term-tokens-per-second.html">tok/s</a>。<a class="gl" href="term-dgx-spark.html">DGX Spark</a>は70Bを載せられても、帯域が<a class="gl" href="term-batch-one.html">Batch 1</a> <a class="gl" href="term-decode.html">Decode</a>の制約になり得ます。<span class="est"><a class="gl" href="term-theoretical-vs-measured.html">理論値</a></span></p>
+  <figure>
+    <img src="image/idx6-hw-tradeoff.png" alt="容量×帯域の四象限とGPU配置">
+    <figcaption>「大きなモデルを一台に載せる」価値と「一人当たりの待ち時間」を分けて評価する。</figcaption>
+  </figure>
+  <div class="decision"><span class="t">判断</span>単体の<a class="gl" href="term-theoretical-tokens-per-second.html">理論tok/s</a>ではなく、想定ピークのユーザー<a class="gl" href="term-tokens-per-second.html">tok/s</a>・<a class="gl" href="term-queue.html">Queue</a>待ち・コンテキスト長・<a class="gl" href="term-concurrent-sequence.html">同時実行数</a>を測定。比較表は候補絞り込み、購入承認は実ワークロードのキャパシティ試験を条件に。<a class="gl" href="term-claude-opus-4-8.html">Opus 4.8</a>は<a class="gl" href="term-self-hosting.html">セルフホスト</a>不可のため、どの構成でも<a class="gl" href="term-application-programming-interface.html">API</a>前提。</div>
+</section>
+
+<!-- CH5 -->
+<div class="chapter" id="ch5"><span class="cn">CHAPTER 5</span><h2>標準構成と運用責任</h2></div>
+
+<section class="sec">
+  <h3>モデルサーバーと状態管理を分離する<span class="sub">ローカルAIのテンプレート</span></h3>
+  <p class="lead">ステートレスな<a class="gl" href="term-model-server.html">推論サーバー</a>と、独立した会話・記憶基盤を組み合わせる。</p>
+  <p>要求をConversation/<a class="gl" href="term-agent-api.html">Agent API</a>が受け、<a class="gl" href="term-raw-event-store.html">Raw Event Store</a>・<a class="gl" href="term-session-store.html">Session Store</a>・<a class="gl" href="term-structured-memory.html">Structured Memory</a>・<a class="gl" href="term-semantic-index.html">Semantic Index</a>・<a class="gl" href="term-artifact-store.html">Artifact Store</a>へ分離し、<a class="gl" href="term-context-builder.html">Context Builder</a>が必要な情報だけを選んで<a class="gl" href="term-model-server.html">推論サーバー</a>（<a class="gl" href="term-vllm.html">vLLM</a>/<a class="gl" href="term-sglang.html">SGLang</a>/<a class="gl" href="term-tensorrt-llm.html">TensorRT-LLM</a>）へ渡します。経営上の利点は、モデル更新と業務データのライフサイクルを切り離せること。モデルを交換しても会話記録や案件情報を保持でき、データの削除・保存期間をモデル更新と独立に管理できます。</p>
+  <figure>
+    <img src="image/idx6-stateless-governance.png" alt="ステートレス推論＋独立した記憶基盤と責任分界">
+    <figcaption>推論とデータを分離。価値は「社内へ置く」だけでなく、保存・利用・削除の規則を自社で強制できること。</figcaption>
+  </figure>
+  <div class="risk"><span class="t"><a class="gl" href="term-self-hosting.html">セルフホスト</a>＝運用責任の移転</span><a class="gl" href="term-application-programming-interface.html">API</a>利用料をGPU費へ置き換えるだけでなく、状態管理と統制の責任が自社へ移る。会話履歴・<a class="gl" href="term-task-state.html">タスク状態</a>・記憶・索引・成果物の保存先、<a class="gl" href="term-memory-writer.html">Memory Writer</a>による検証、誰が閲覧でき・いつ失効させ・どの会話を根拠にしたかの定義まで自社が負う。標準基盤にはデータ管理・セキュリティ・業務オーナーの責任分界を含める。</div>
+  <div class="decision"><span class="t">キャパシティ計画</span>収容能力は契約ユーザー数ではなく、ピーク時にGPU上へ残る生存トークン総量で決まる。席数をそのまま台数へ変換せず、小規模な実測からピーク負荷を把握して増設判断する（過剰投資とSLA不足の双方を回避）。</div>
+</section>
+
+<!-- CH6 -->
+<div class="chapter" id="ch6"><span class="cn">CHAPTER 6</span><h2>記憶 ＝ データ統制と責任分界</h2></div>
+
+<section class="sec">
+  <h3>記憶はモデル機能ではなくデータ統制<span class="sub">クローズドAPIの裏側</span></h3>
+  <p class="lead">「<a class="gl" href="term-conversation-memory.html">会話記憶</a>があるか」ではなく、「どの状態を誰が管理し、どの期間保存するか」を確認事項にする。</p>
+  <p>会話を覚えているように見えても、通常はモデル重みが更新されているのではなく、保存履歴を次のリクエストで取得して再投入しているだけです。記憶設計はモデル選定よりも、状態の保存先と取得方法の設計です。</p>
+  <table>
+    <thead><tr><th>提供者</th><th>つなぎ方</th><th>保持・主体</th></tr></thead>
+    <tbody>
+      <tr><td>OpenAI</td><td>previous_response_id / <a class="gl" href="term-conversations-api.html">Conversations API</a></td><td>Responseは30日／Conversation項目は<a class="gl" href="term-time-to-live.html">TTL</a>対象外</td></tr>
+      <tr><td>Google</td><td><a class="gl" href="term-previous-interaction-id.html">previous_interaction_id</a></td><td>有料55日／無料1日</td></tr>
+      <tr><td>Anthropic</td><td>毎回履歴送信（ステートレス）</td><td>保存先は原則開発者側</td></tr>
+    </tbody>
+  </table>
+  <p>この差は<a class="gl" href="term-application-programming-interface.html">API</a>の使い勝手だけでなく、保存場所・保持期間・削除責任・監査方法の差です。クローズド<a class="gl" href="term-application-programming-interface.html">API</a>でも契約・設計上の確認事項にします。</p>
+</section>
+
+<section class="sec">
+  <h3>全履歴投入から段階的に卒業する<span class="sub">ナイーブ→要約→RAG→モダン</span></h3>
+  <p>全履歴送信は単純ですが、会話が長いほど入力トークン・<a class="gl" href="term-prefill.html">Prefill</a>・KV・課金が増え、品質も落ち得ます。<a class="gl" href="term-rolling-summary.html">Rolling Summary</a>は効率的でも数値・期限・権限・原文の正確管理に弱く、RAG（Vector検索）だけで部署・本番リージョン・契約終了日などの確定情報を管理すべきではありません。モダンな構成は、最新会話・要約・<a class="gl" href="term-structured-memory.html">構造化記憶</a>・<a class="gl" href="term-semantic-retrieval.html">Semantic Retrieval</a>・現在の<a class="gl" href="term-task-state.html">タスク状態</a>を組み合わせます。経営上の要点は、コンテキスト上限を増やすことより、必要情報を選び正しい形式で渡す<a class="gl" href="term-context-builder.html">Context Builder</a>へ投資することです。保存時は<a class="gl" href="term-memory-writer.html">Memory Writer</a>が、将来必要か・事実か推測か・<a class="gl" href="term-time-to-live.html">有効期限</a>・所有者・機密区分・根拠メッセージを判定し、検証後にDBへ反映します。</p>
+  <div class="risk"><span class="t">やってはいけない</span><a class="gl" href="term-kv-cache.html">KVキャッシュ</a>を<a class="gl" href="term-long-term-memory.html">長期記憶</a>の正本にしない（巨大・監査不能・環境依存）。個人記憶を<a class="gl" href="term-fine-tuning.html">Fine-tuning</a>/<a class="gl" href="term-lora.html">LoRA</a>で重みへ焼き込まない（削除・更新困難、陳腐化、他ユーザーへの影響、再学習コスト）。モデル能力・会話状態・業務データの責任を分け、モデルを交換してもデータ統制と利用者体験を維持する。</div>
+</section>
+
+<!-- CH7 -->
+<div class="chapter" id="ch7"><span class="cn">CHAPTER 7</span><h2>Reasoning ＝ ルーティング変数</h2></div>
+
+<section class="sec">
+  <h3>品質向上機能ではなくルーティング変数<span class="sub">見えない生成コスト</span></h3>
+  <p class="lead">Reasoningは「ONで品質が上がる」一方向の話ではなく、必要な仕事へ選択的に割り当てる計算資源。</p>
+  <p>画面に表示されなくても<a class="gl" href="term-reasoning-token.html">Reasoning tokens</a>は通常の<a class="gl" href="term-decode.html">Decode</a>で生成され、時間・コンテキスト・KV・課金・同時実行能力を消費します。公式の単一例では、OpenAIはReasoning 1,024に対し<a class="gl" href="term-visible-output.html">表示出力</a>約162、Geminiはthought 297に対し表示171。50 <a class="gl" href="term-tokens-per-second.html">tok/s</a>なら、OpenAI例は表示だけ約3.24秒がReasoning込み約23.72秒になります。Qwen3-32B相当・表示500・50 <a class="gl" href="term-tokens-per-second.html">tok/s</a>でReasoning 4,096を足すと、完了約1分32秒・追加KV 1GiB。10人同時なら約10GiBを占有します。<strong>Reasoningポリシーは品質設定であると同時にキャパシティ設定です。</strong></p>
+  <figure>
+    <img src="image/idx6-reasoning-routing.png" alt="タスク難度に応じてEffort/モデル/Workerを振り分けるルーター">
+    <figcaption>次世代<a class="gl" href="term-router.html">ルーター</a>は「どのモデルか」だけでなく「どの<a class="gl" href="term-effort.html">Effort</a>か・何Workerか」まで選ぶ。</figcaption>
+  </figure>
+</section>
+
+<section class="sec">
+  <h3>Effortは固定数ではない／安価な経路から段階強化<span class="sub">動的ルーティング</span></h3>
+  <p>Low/Medium/Highは固定トークン上限ではなく、Reasoning量の分布を変える指示です。2026年の<a class="gl" href="term-ares.html">Ares研究</a>（<a class="gl" href="term-gpt-oss-20b.html">gpt-oss-20b</a>／<a class="gl" href="term-tau-bench.html">TAU-Bench Retail</a>）では、常時Low 35.0%・25K、常時High 54.8%・1,007K、動的選択 58.5%・476K。この特定評価では、High固定はLowの約40倍のトークンを使い、動的選択はトークンを削減しつつ成功率を維持または改善しました（一般則ではない）。</p>
+  <table>
+    <thead><tr><th>タスク</th><th>初期Reasoning方針</th></tr></thead>
+    <tbody>
+      <tr><td>分類・検索・定型回答</td><td>OFF / None / Minimal</td></tr>
+      <tr><td>通常チャット・要約</td><td>Low</td></tr>
+      <tr><td>コード生成・資料作成</td><td>Medium</td></tr>
+      <tr><td>複雑なデバッグ・設計・経営分析</td><td>High</td></tr>
+    </tbody>
+  </table>
+  <div class="decision"><span class="t">方針</span>最初から最大設定にせず、<a class="gl" href="term-verifier.html">Verifier</a>が失敗を検知したら一段階上げ、必要時のみ強いモデルや複数Workerへ。input/reasoning/visible output tokensを分けて測定し、すべての処理をHigh固定にしない。生Reasoningは長期保存せず、最終回答・ツール結果・決定・未解決・短い要約だけを引き継ぐ。</div>
+</section>
+
+<!-- CH8 -->
+<div class="chapter" id="ch8"><span class="cn">CHAPTER 8</span><h2>GLM-5.2 / Kimi-2.7 / Opus-4.8 と「自前 vs API」</h2></div>
+
+<section class="sec">
+  <h3>性能順位ではなく用途と提供形態で選ぶ<span class="sub">三モデルの位置づけ</span></h3>
+  <table>
+    <thead><tr><th>項目</th><th><a class="gl" href="term-glm-5-2.html">GLM-5.2</a></th><th><a class="gl" href="term-kimi-k2-7-code.html">Kimi K2.7-Code</a></th><th><a class="gl" href="term-claude-opus-4-8.html">Opus 4.8</a></th></tr></thead>
+    <tbody>
+      <tr><td>規模/形態</td><td>753B MoE・公開(MIT)</td><td>約1T MoE・公開(改変MIT)</td><td>非公開・<a class="gl" href="term-application-programming-interface.html">API</a>専用</td></tr>
+      <tr><td>コンテキスト</td><td>1M</td><td>256K</td><td>既定1M（出力128K）</td></tr>
+      <tr><td>傾向 <span class="est">非公式</span></td><td>計画・ワンショット生成</td><td>自律的コーディング/バグ修正</td><td>最難問の性能上限とされる</td></tr>
+    </tbody>
+  </table>
+  <p>第三者ベンチの順位より、<a class="gl" href="term-self-hosting.html">セルフホスト</a>可否・対象業務・コンテキスト・ライセンスを先に見ます。Z.aiは公式ベンチを伴わず出荷しており、出回る数値を確定的な調達根拠にすべきではありません。<a class="gl" href="term-claude-opus-4-8.html">Opus 4.8</a>はクローズドで<a class="gl" href="term-self-hosting.html">セルフホスト</a>不可、内部仕様は非公開です。</p>
+</section>
+
+<section class="sec">
+  <h3>Active parametersではなく全重みを載せる<span class="sub">セルフホスト構成の前提（推定）</span></h3>
+  <p>MoEで各トークンに使う<a class="gl" href="term-expert.html">Expert</a>が一部でも、全<a class="gl" href="term-expert.html">Expert</a>を常駐させる必要があります。低同時実行でもGPUを減らせるとは限りません。費用を下げる手段は主に<a class="gl" href="term-quantization.html">量子化</a>・停止運用・共有利用で、利用者数に比例してGPU数は減りません。</p>
+  <table>
+    <thead><tr><th>モデル</th><th>4bit(推定)</th><th>FP8(推定)</th></tr></thead>
+    <tbody>
+      <tr><td><a class="gl" href="term-glm-5-2.html">GLM-5.2</a></td><td>~470GB／<a class="gl" href="term-h100.html">H100</a>×6（1ノード）</td><td>~941GB／<a class="gl" href="term-h100.html">H100</a>×12（2ノード）</td></tr>
+      <tr><td><a class="gl" href="term-kimi-k2-7-code.html">Kimi K2.7</a></td><td>~625GB／<a class="gl" href="term-h100.html">H100</a>×8（1ノード）</td><td>~1,250GB／<a class="gl" href="term-h100.html">H100</a>×16（2ノード）</td></tr>
+    </tbody>
+  </table>
+  <p><small><span class="est">推定</span> 「パラメータ数 × 1パラメータ容量 × 1.2〜1.3倍」。KV・通信・<a class="gl" href="term-replica.html">レプリカ</a>別途。</small></p>
+</section>
+
+<section class="sec">
+  <h3>自前 vs API のコスト判断<span class="sub">ユーザー1人 / 100人（2026年6月概算）</span></h3>
+  <p class="lead">一人・低同時実行で24時間常駐させるなら、<a class="gl" href="term-self-hosting.html">セルフホスト</a>は稼働率が低く、原則<a class="gl" href="term-application-programming-interface.html">API</a>が有利。</p>
+  <table>
+    <thead><tr><th>8×<a class="gl" href="term-h100.html">H100</a>ノード <span class="est">推定</span></th><th class="num">時間単価</th><th class="num">月額/1ノード</th></tr></thead>
+    <tbody>
+      <tr><td><a class="gl" href="term-h100-cloud-nodes.html">AWS p5.48xlarge</a></td><td class="num">$55〜98.3</td><td class="num">~$4万〜7.2万</td></tr>
+      <tr><td><a class="gl" href="term-h100-cloud-nodes.html">GCP a3-highgpu-8g</a></td><td class="num">~$88</td><td class="num">~$6.4万</td></tr>
+      <tr><td><a class="gl" href="term-h100-cloud-nodes.html">Azure ND H100 v5</a></td><td class="num">~$98.3</td><td class="num">~$7.2万</td></tr>
+      <tr><td>自社購入＋DC（<a class="gl" href="term-three-year-depreciation.html">3年償却</a>）</td><td class="num">—</td><td class="num">~$1.3万</td></tr>
+    </tbody>
+  </table>
+  <table>
+    <thead><tr><th>100人・本番 <span class="est">推定</span></th><th class="num">2ノード/月</th><th class="num">3〜4ノード/月</th></tr></thead>
+    <tbody>
+      <tr><td>AWS</td><td class="num">~$8万〜14.4万</td><td class="num">~$12万〜28.8万</td></tr>
+      <tr><td>GCP</td><td class="num">~$12.8万</td><td class="num">~$19.2万〜25.6万</td></tr>
+      <tr><td>Azure</td><td class="num">~$14.4万</td><td class="num">~$21.6万〜28.8万</td></tr>
+      <tr><td>自社購入(<a class="gl" href="term-depreciation.html">償却</a>)</td><td class="num">~$2.5万〜2.6万</td><td class="num">—</td></tr>
+    </tbody>
+  </table>
+  <p><small><a class="gl" href="term-on-demand-billing.html">オンデマンド</a>・月730h・GPUノード費のみ（ストレージ/転送/LB/監視/サポート別、要検証）。参考<a class="gl" href="term-application-programming-interface.html">API</a>: <a class="gl" href="term-glm-5-2.html">GLM-5.2</a>ホスト型 ≈ 入力$1.40/出力$4.40 per1M（報道二次）、<a class="gl" href="term-claude-opus-4-8.html">Opus 4.8</a> 入力$5/出力$25（要確認）。</small></p>
+  <figure>
+    <img src="image/idx6-cost-comparison.png" alt="自前DCとクラウドの月額比較と稼働率の分岐点">
+    <figcaption>24時間・高稼働・3年使い切りなら自前DCがクラウドの約3〜5分の1（推定）。変動負荷・頻繁なモデル更新なら<a class="gl" href="term-application-programming-interface.html">API</a>有利。</figcaption>
+  </figure>
+  <div class="decision"><span class="t">分岐点</span>「100人いるか」ではなく「大規模モデルを一定以上の稼働率で継続利用し、運用責任を引き受けられるか」。負荷変動・頻繁なモデル変更・最高性能クローズドも使いたい→<a class="gl" href="term-application-programming-interface.html">API</a>。安定高稼働・データ統制・単価予見性→自社DC含む<a class="gl" href="term-self-hosting.html">セルフホスト</a>。<a class="gl" href="term-claude-opus-4-8.html">Opus 4.8</a>はどの構成でも<a class="gl" href="term-application-programming-interface.html">API</a>前提。</div>
+</section>
+
+<!-- CH9 -->
+<div class="chapter" id="ch9"><span class="cn">CHAPTER 9</span><h2>Fugu と Fusion ＝ 複数モデル活用</h2></div>
+
+<section class="sec">
+  <h3>提供価値が異なる<span class="sub">動的編成と固定パネル</span></h3>
+  <p><a class="gl" href="term-fugu.html">Fugu</a>は単一のファウンデーションモデル<a class="gl" href="term-application-programming-interface.html">API</a>として振る舞い、自分で解くか専門チームを編成するかをクエリごとに判断し、動的scaffoldで一つの回答へ統合します。<a class="gl" href="term-fusion.html">Fusion</a>は複数モデルを<a class="gl" href="term-panel.html">パネル</a>として並列実行し、judgeがマージせず合意・矛盾・盲点を構造化JSONで返します（固定の「<a class="gl" href="term-panel.html">パネル</a>並列＋judge」、モデルはOpenRouter上の他社製）。<a class="gl" href="term-fugu.html">Fugu</a>は回答生成を委譲したい場合、<a class="gl" href="term-fusion.html">Fusion</a>は複数の見解を比較したい場合に向き、どちらも単一モデルよりコストとレイテンシが増えます。</p>
+  <figure>
+    <img src="image/idx6-fugu-fusion.png" alt="Fugu=動的編成→1回答 / Fusion=固定パネル+Judge比較">
+    <figcaption><a class="gl" href="term-fugu.html">Fugu</a>＝委譲して一本化（fee stack無し）。<a class="gl" href="term-fusion.html">Fusion</a>＝意見を並べ比較（参加モデル＋judgeを合算）。</figcaption>
+  </figure>
+</section>
+
+<section class="sec">
+  <h3>費用と使い所／ポートフォリオ方針<span class="sub">価値の高い局面へ限定する</span></h3>
+  <table>
+    <thead><tr><th><a class="gl" href="term-fugu.html">Fugu</a> <span class="est">公式</span></th><th class="num">料金</th></tr></thead>
+    <tbody>
+      <tr><td>Standard / Pro(10×) / Max(20×)</td><td class="num">月$20 / $100 / $200</td></tr>
+      <tr><td><a class="gl" href="term-fugu.html">Fugu Ultra</a> 従量(/1M)</td><td class="num">入力$5 / 出力$30 / Cached$0.50</td></tr>
+    </tbody>
+  </table>
+  <p><a class="gl" href="term-fugu.html">Fugu</a>は複数エージェントを呼んでも最上位単価一本で扱い（下位プランのトークン上限は非開示・要検証）、委譲の自動化・障害迂回・費用一本化に向きます。<a class="gl" href="term-fusion.html">Fusion</a>は「<a class="gl" href="term-fusion.html">Fusion</a>自体は0ドル/M」でも、<a class="gl" href="term-panel.html">パネル</a>各モデル＋judgeを合算するため、デフォルト3モデルで単発の約4〜5倍。高リスクな経営判断・設計レビュー・検証など、異論を監査可能な形で残したい処理に限定起動するのが適切です。</p>
+  <div class="decision"><span class="t">ポートフォリオ方針</span>ROIは「単一モデルを上回るか」ではなく「改善が追加費用と待ち時間に見合うか」。通常処理は単一モデル、<a class="gl" href="term-verifier.html">Verifier</a>が不確実性や失敗を検知したときだけ<a class="gl" href="term-fugu.html">Fugu</a>/<a class="gl" href="term-fusion.html">Fusion</a>へ昇格。複数モデルを常時オンにせず、失敗コストの高いタスクへ限定投入する。</div>
+</section>
+
+<!-- CH10 -->
+<div class="chapter" id="ch10"><span class="cn">CHAPTER 10</span><h2>LLMは部品、主役はハーネス</h2></div>
+
+<section class="sec">
+  <h3>投資対象の再定義<span class="sub">業務を動かすのはハーネス</span></h3>
+  <p class="lead">モデルの更新だけをAI投資と捉えると、業務成果を決める制御<a class="gl" href="term-layer.html">層</a>への投資が不足する。</p>
+  <p>LLM単体は入力から次トークンを生成するステートレスな部品で、自律的な業務システムを完成させません。<a class="gl" href="term-codex-cli.html">Codex CLI</a>や<a class="gl" href="term-claude-code.html">Claude Code</a>のような<a class="gl" href="term-harness.html">ハーネス</a>が、<a class="gl" href="term-agent-loop.html">エージェントループ</a>（コンテキスト送信→<a class="gl" href="term-tool-call.html">ツール呼び出し</a>実行→結果を次へ）、ツール定義と実行、System指示・<a class="gl" href="term-instruction-files.html">AGENTS.md</a>/<a class="gl" href="term-instruction-files.html">CLAUDE.md</a>・履歴・ツール出力の組み立て、自動実行/人間承認の判断、OS<a class="gl" href="term-sandbox.html">サンドボックス</a>を担います。成果物の品質・作業範囲・実行可能な操作・失敗時の停止条件は、モデル能力だけでなく<a class="gl" href="term-harness.html">ハーネス</a>設計で決まります。</p>
+  <figure>
+    <img src="image/idx6-harness-investment.png" alt="モデルだけでなくハーネス・記憶・ツール・権限へ投資配分">
+    <figcaption>投資をモデルだけに偏らせない。<a class="gl" href="term-agent-api.html">Agent API</a>・<a class="gl" href="term-context-builder.html">Context Builder</a>・記憶・ツール・承認・<a class="gl" href="term-sandbox.html">サンドボックス</a>が共通資産。</figcaption>
+  </figure>
+</section>
+
+<section class="sec">
+  <h3>権限とサンドボックスはモデルへ委任しない<span class="sub">Codex CLIとClaude Code</span></h3>
+  <p>安全性は「危険な操作をしないで」と依頼するだけでは確保できません。公式にも、<a class="gl" href="term-permission-allow-ask-deny.html">権限ルール</a>を強制するのはモデルではなく<a class="gl" href="term-claude-code.html">Claude Code</a>側だとされています。承認は「実行してよいか」を、<a class="gl" href="term-sandbox.html">サンドボックス</a>は「実行できる範囲」をOSレベルで制限し、両者は別レイヤーです。<a class="gl" href="term-codex-cli.html">Codex CLI</a>は<a class="gl" href="term-sandbox-modes.html">read-only</a> / <a class="gl" href="term-sandbox-modes.html">workspace-write</a>（既定・ネット無効）/ <a class="gl" href="term-sandbox-modes.html">danger-full-access</a> の<a class="gl" href="term-sandbox.html">サンドボックス</a>と、<a class="gl" href="term-approval-policies.html">untrusted</a> / <a class="gl" href="term-approval-policies.html">on-request</a> / <a class="gl" href="term-approval-policies.html">on-failure</a> / <a class="gl" href="term-approval-policies.html">never</a> の承認モードを持ちます（実装はmacOS=<a class="gl" href="term-seatbelt-bubblewrap.html">Seatbelt</a>、Linux/WSL2=<a class="gl" href="term-seatbelt-bubblewrap.html">bubblewrap</a>）。<a class="gl" href="term-claude-code.html">Claude Code</a>も <a class="gl" href="term-permission-allow-ask-deny.html">allow</a>/<a class="gl" href="term-permission-allow-ask-deny.html">ask</a>/<a class="gl" href="term-permission-allow-ask-deny.html">deny</a> の階<a class="gl" href="term-layer.html">層</a>と default/acceptEdits/plan/auto/dontAsk/bypassPermissions のモードを持ちます。<strong>どのモデルを採用するかと同じ水準で、既定の権限・承認が必要な操作・ネットワーク接続・書き込み範囲を決める必要があります。</strong></p>
+</section>
+
+<section class="sec">
+  <h3>サーバー側状態はハーネスを置き換えない／モデル予算だけでROIを評価しない<span class="sub">責任分界と投資配分の原則</span></h3>
+  <p>OpenAI <a class="gl" href="term-responses-api.html">Responses API</a>は任意に<a class="gl" href="term-stateful.html">ステートフル</a>にでき（<a class="gl" href="term-response-state-linking.html">store=true</a>既定・30日保持、previous_response_idで文脈接続、ただし過去入力も課金）、<a class="gl" href="term-messages-api-stateless.html">Anthropic Messages API</a>はステートレスです。これは履歴の転送方法と保存主体の違いであり、作業ディレクトリ・編集ファイル・<a class="gl" href="term-instruction-files.html">指示ファイル</a>・権限・<a class="gl" href="term-sandbox.html">サンドボックス</a>・ツール実行・<a class="gl" href="term-agent-loop.html">エージェントループ</a>はクライアント側<a class="gl" href="term-harness.html">ハーネス</a>が担います。サーバー側状態は履歴再送の一部を置き換えますが、<a class="gl" href="term-harness.html">ハーネス</a>そのものは置き換えません。責任分界を曖昧にすると、どのデータが端末・社内基盤・<a class="gl" href="term-application-programming-interface.html">API</a>事業者に残るかを把握できなくなります。</p>
+  <div class="decision"><span class="t">投資配分の原則</span>AI投資はモデル利用料やGPU費だけでなく、<a class="gl" href="term-harness.html">ハーネス</a>・記憶・ツール・権限・評価へ配分する。共通資産（モデルを交換可能にする<a class="gl" href="term-agent-api.html">Agent API</a>、<a class="gl" href="term-context-builder.html">Context Builder</a>、<a class="gl" href="term-structured-memory.html">構造化記憶</a>と<a class="gl" href="term-artifact-store.html">Artifact Store</a>、ツール接続、承認規則、OS<a class="gl" href="term-sandbox.html">サンドボックス</a>）をモデルごとの個別実装にしない。最終判断は「どのモデルが強いか」だけでなく、「どのタスクをどのモデルとReasoning量へ振り分けるか」「どの情報を記憶に残すか」「どの操作を自動化し、どこで人間承認を求めるか」。</div>
+</section>
+
+</main>
+
+<footer>
+  <p>勉強会資料・index6（経営者向け）／ 本文：Oracle執筆。価格・ベンチは2026年6月時点の <span class="est">推定</span>・非公式・要検証。章8〜10はweb調査ブリーフに基づく。発注前に各コンソール/価格ページで要確認。</p>
+  <p><a href="index1.html">案A</a> ・ <a href="index2.html">案B</a> ・ <a href="index3.html">案C</a> ｜ <a href="index4.html">index4 技術者向け</a> ・ <a href="index5.html">index5 デザイナー向け</a> ／ <a href="hardware.html">補章: サーバーGPU編</a></p>
+</footer>
+</body>
+</html>

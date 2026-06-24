@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>用語: NVIDIA H100</title><style>*{box-sizing:border-box}body{margin:0;background:#f6f7fb;color:#1f2733;
+font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;
+line-height:1.85;font-size:16px}main{max-width:720px;margin:0 auto;padding:40px 22px 80px}
+a{color:#4f5bd5}.back{font-size:.85rem}.cat{display:inline-block;background:#eceefb;color:#4f5bd5;
+border-radius:999px;padding:.25em .8em;font-size:.72rem;font-weight:700;letter-spacing:.05em;margin:.4em 0}
+h1{font-size:1.7rem;margin:.3em 0 .1em}.aka{color:#5a6675;font-size:.9rem;margin:.2em 0 1em}
+.plain{font-size:1.02rem}.calc{background:#1c2230;color:#e7ecf5;border-radius:10px;padding:14px 18px;
+margin:1.2em 0;font-family:'SFMono-Regular',Consolas,Menlo,monospace;font-size:.86rem;line-height:1.7;
+white-space:pre-wrap;overflow-x:auto}.calc .l{color:#8fb3ff;font-size:.7rem;letter-spacing:.12em;display:block;margin-bottom:.4em}
+footer{margin-top:2.4em;padding-top:14px;border-top:1px solid #e3e7ef;color:#5a6675;font-size:.82rem}</style></head>
+<body><main><div class="back"><a href="glossary.html">← 用語集</a></div>
+<h1>NVIDIA H100</h1><div class="cat">GPU基盤</div><div class="aka">別名・表記: NVIDIA H200、H100/H200</div>
+<p class="plain">巨大モデルの重みを複数枚へ分散して載せるために使われるデータセンター向けGPUである。第8章の構成例では、同じモデルでもH200を使う方が必要枚数を少なくできるが、重み以外のKV、通信、Runtime用の余裕も必要になる。</p><div class="calc"><span class="l">計算・導出</span>GPU枚数概算＝ceil（必要VRAM÷GPU容量）。本文例ではGLM-5.2 FP8約941GBを12×H100または7×H200、4bit約470GBを6×H100または4×H200で収容する。</div>
+<footer>勉強会用語集 ／ <a href="index4.html">技術者向け</a>・<a href="index5.html">デザイナー向け</a>・<a href="index6.html">経営者向け</a>・<a href="hardware.html">サーバーGPU編</a></footer>
+</main></body></html>

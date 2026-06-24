@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>机の上のLLM — 机・司書・書庫で理解するAIの記憶</title>
+<style>
+  :root{
+    --bg:#f7f5ef; --ink:#243b53; --ink-soft:#486581; --line:#e3ddcd;
+    --teal:#1f9d8f; --teal-bg:#e3f4f1; --orange:#e8833a; --orange-bg:#fcefe2;
+    --red:#d6453d; --red-bg:#fbe7e5; --card:#fffdf8; --shadow:0 2px 14px rgba(36,59,83,.08);
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",sans-serif;
+    line-height:1.85;font-size:16px;}
+  a{color:var(--teal)}
+  header.hero{padding:72px 24px 56px;text-align:center;background:
+    radial-gradient(900px 380px at 50% -10%,#eef7f5 0%,transparent 70%),var(--bg);
+    border-bottom:1px solid var(--line)}
+  header.hero .kicker{letter-spacing:.3em;font-size:.78rem;color:var(--teal);font-weight:700}
+  header.hero h1{font-size:clamp(1.8rem,4.5vw,3rem);margin:.4em 0 .2em;line-height:1.25}
+  header.hero p.lead{font-size:clamp(1rem,2.2vw,1.25rem);color:var(--ink-soft);max-width:760px;margin:.6em auto}
+  .pill{display:inline-block;background:var(--teal-bg);color:var(--teal);border-radius:999px;
+    padding:.2em .9em;font-size:.8rem;font-weight:700;margin:.2em}
+  nav.toc{position:sticky;top:0;z-index:20;background:rgba(247,245,239,.92);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);padding:10px 16px;font-size:.82rem;overflow-x:auto;white-space:nowrap}
+  nav.toc a{color:var(--ink-soft);text-decoration:none;margin-right:14px}
+  nav.toc a:hover{color:var(--teal)}
+  main{max-width:960px;margin:0 auto;padding:8px 22px 80px}
+  section{padding:48px 0 8px;border-bottom:1px dashed var(--line)}
+  section>.num{font:700 .8rem/1 var(--mono);color:var(--orange);letter-spacing:.15em}
+  section h2{font-size:clamp(1.35rem,3.2vw,1.9rem);margin:.25em 0 .5em;line-height:1.3}
+  section h3{font-size:1.1rem;margin:1.6em 0 .4em;color:var(--ink)}
+  p{margin:.8em 0}
+  figure{margin:1.4em 0;text-align:center}
+  figure img{max-width:min(100%,640px);display:block;margin-inline:auto;border-radius:14px;border:1px solid var(--line);background:#fff;box-shadow:var(--shadow)}
+  figure figcaption{font-size:.85rem;color:var(--ink-soft);margin-top:.5em}
+  table{width:100%;border-collapse:collapse;margin:1.1em 0;font-size:.9rem;background:var(--card);
+    border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  th,td{padding:.6em .8em;text-align:left;border-bottom:1px solid var(--line)}
+  thead th{background:#efeadb;color:var(--ink);font-size:.82rem;letter-spacing:.02em}
+  tbody tr:last-child td{border-bottom:none}
+  td.num,th.num{text-align:right;font-family:var(--mono)}
+  .bad{color:var(--red);font-weight:700}
+  .strike{text-decoration:line-through;color:var(--ink-soft)}
+  .callout{border-radius:12px;padding:14px 18px;margin:1.2em 0;border-left:5px solid;font-size:.93rem}
+  .callout .tag{font-weight:800;font-size:.72rem;letter-spacing:.12em;display:block;margin-bottom:.2em;text-transform:uppercase}
+  .fact{background:var(--teal-bg);border-color:var(--teal)} .fact .tag{color:var(--teal)}
+  .caution{background:var(--red-bg);border-color:var(--red)} .caution .tag{color:var(--red)}
+  .formula{background:#1d2b3a;color:#e8eef5;border-radius:12px;padding:16px 20px;margin:1.1em 0;
+    font-family:var(--mono);font-size:.9rem;line-height:1.7;overflow-x:auto}
+  .formula .label{color:#7fd1c6;font-size:.72rem;letter-spacing:.14em;display:block;margin-bottom:.5em}
+  .example{background:var(--orange-bg);border:1px solid #f0d3b6;border-radius:12px;padding:14px 18px;margin:1.1em 0;
+    font-family:var(--mono);font-size:.88rem;white-space:pre-wrap}
+  .example .label{color:var(--orange);font-weight:800;font-size:.72rem;letter-spacing:.12em;display:block;margin-bottom:.4em;font-family:inherit}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin:1.4em 0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
+  .card h4{margin:.1em 0 .3em;font-size:1rem;color:var(--teal)}
+  details{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 18px;margin:1.2em 0}
+  details summary{cursor:pointer;font-weight:700;padding:10px 0;color:var(--ink)}
+  .badge{display:inline-block;font:700 .66rem/1 var(--mono);padding:.28em .5em;border-radius:6px;vertical-align:middle}
+  .b-theory{background:#e6eef7;color:#2f6fb0}.b-approx{background:#fff2dc;color:#b9772a}
+  .b-single{background:#efe6f7;color:#7a4fb0}.b-bench{background:#e3f4f1;color:var(--teal)}
+  footer{max-width:960px;margin:0 auto;padding:40px 22px 80px;color:var(--ink-soft);font-size:.85rem}
+  .stack{display:flex;flex-direction:column;gap:4px;margin:1em 0}
+  .stack .row{background:var(--teal-bg);border:1px solid #cfe9e4;border-radius:8px;padding:.4em .8em;font-size:.85rem}
+  .stack .row.out{background:var(--orange-bg);border-color:#f0d3b6}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="kicker">勉強会 / 案A — 初学者・全社向け</div>
+  <h1>机の上のLLM</h1>
+  <p class="lead">机・司書・書庫で理解するAIの記憶。<br><strong>モデルは会話を覚えない。司書が必要な資料を、毎回机へ戻している。</strong></p>
+  <div>
+    <span class="pill">モデルサイズ</span><span class="pill">コンテキスト</span><span class="pill">KVキャッシュ</span>
+    <span class="pill">メモリ帯域</span><span class="pill">Reasoning</span><span class="pill">会話記憶</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#a0">0. 覚えた？</a><a href="#a1">1. 5種のメモリ</a><a href="#a2">2. 本棚=モデルサイズ</a>
+  <a href="#a3">3. 机=コンテキスト</a><a href="#a4">4. KV=計算メモ</a><a href="#a5">5. 同時利用</a>
+  <a href="#a6">6. 廊下=帯域</a><a href="#a7">7. Reasoning</a><a href="#a8">8. 司書=記憶</a>
+  <a href="#a9">9. マルチエージェント</a><a href="#a10">10. 4つの問い</a><a href="#a11">付録</a>
+</nav>
+
+<main>
+
+<section id="a0">
+  <span class="num">A-0</span>
+  <h2>このAIは、本当に会話を覚えたのか？</h2>
+  <p>AIが前回の会話を覚えているように見えるとき、まず区別すべきなのは、「モデル自身が学習した」のか、「システムが以前の情報をもう一度モデルへ渡した」のかという点である。この違いを理解しないと、会話履歴、長期メモリ、コンテキスト、追加学習を同じ仕組みとして扱ってしまう。</p>
+  <p>通常の会話では、モデルの重みは前回とほぼ同じままである。外部システムが過去の発言や保存済みのユーザー情報を取り出し、今回の入力と一緒にコンテキストへ入れることで、モデルは続きから話しているように振る舞う。つまり、会話を覚えているのはモデル単体ではなく、保存・検索・再投入を行うシステム全体である。</p>
+  <figure>
+    <img src="image/ai-memory-misdirection.png" alt="変化しないLLMと、前回資料を机に戻す司書の対比">
+    <figcaption>同じモデル本体は変化しない。前回の資料を机へ戻しているのは「司書（外部システム）」。</figcaption>
+  </figure>
+  <div class="callout caution"><span class="tag">誤解しやすい点</span>
+    会話を覚えているように見えても、通常はモデルの重みが書き換わっているわけではない。</div>
+</section>
+
+<section id="a1">
+  <span class="num">A-1</span>
+  <h2>仕事部屋にある5種類のメモリ</h2>
+  <p>LLMの「メモリ」という言葉には性質の異なる仕組みが含まれるため、仕事部屋にある道具として分けて考えると理解しやすい。モデルの重みは、すでに身につけた一般知識や能力が並ぶ本棚である。コンテキストは、今回の作業に必要な資料を広げる机であり、KVキャッシュは作業中だけ使う計算メモに相当する。</p>
+  <p>Prefix CacheやPrompt Cacheは、何度も使う共通資料をあらかじめコピーしておく仕組みである。会話やユーザー情報を保存する長期メモリは、机から離れた書庫やファイルキャビネットに当たる。そしてContext Builderは、書庫から今回必要な情報だけを選び、机の上へ並べる司書の役割を担う。それぞれ実体、寿命、共有範囲が異なるため、単に「メモリが多い」とひとまとめにはできない。</p>
+  <figure>
+    <img src="image/desk-library-memory-map.png" alt="本棚・机・計算メモ・コピー資料・書庫・司書を配置した仕事部屋">
+    <figcaption>1つの「仕事部屋」に5種のメモリと司書（Context Builder）を配置。</figcaption>
+  </figure>
+  <table>
+    <thead><tr><th>名称</th><th>部屋の比喩</th><th>実体</th><th>寿命</th><th>主な役割</th></tr></thead>
+    <tbody>
+      <tr><td>モデルの重み</td><td>本棚</td><td>数十B〜数百B個のパラメータ</td><td>モデル更新まで</td><td>学習済み知識・能力</td></tr>
+      <tr><td>コンテキスト</td><td>机の上</td><td>今回モデルへ渡したトークン</td><td>1回の推論</td><td>現在の作業記憶</td></tr>
+      <tr><td>KVキャッシュ</td><td>計算メモ用紙</td><td>GPU上のK/Vテンソル</td><td>リクエスト実行中</td><td>過去トークンの再計算防止</td></tr>
+      <tr><td>Prefix／Prompt Cache</td><td>コピー済み共通資料</td><td>共通プロンプトの計算結果</td><td>数分〜任意のTTL</td><td>速度・コストの最適化</td></tr>
+      <tr><td>会話・長期メモリ</td><td>書庫・キャビネット</td><td>DB・ファイル・ベクトル索引</td><td>日〜永続</td><td>ユーザー・案件・作業の記憶</td></tr>
+    </tbody>
+  </table>
+  <div class="callout fact"><span class="tag">司書 = Context Builder</span>
+    必要な資料を書庫から取り出し、机（コンテキスト）へ並べる役。記憶の出し入れを担うのはモデルではなくこの司書。</div>
+</section>
+
+<section id="a2">
+  <span class="num">A-2</span>
+  <h2>本棚の大きさがモデルサイズ</h2>
+  <p>モデルサイズは、モデルが持つパラメータ、すなわち重みの個数を表す。「32B」のBはBillion、10億を意味するため、32Bモデルには約320億個のパラメータがある。ただし、パラメータ数が大きいほど必ず回答品質が高いとは限らず、学習方法やデータ、モデル構造も品質を左右する。</p>
+  <p>重みだけの理論容量は、「パラメータ数[B] × 1パラメータ当たりのbit数 ÷ 8」で概算できる。32BモデルならBF16では約64GB、8bitでは約32GB、4bitでは約16GBとなる。70Bモデルではそれぞれ約140GB、70GB、35GBである。ただし、これは重みだけの値であり、実際の推論にはKVキャッシュ、作業領域、量子化の管理情報、通信バッファ、メモリ断片化への余裕も必要になる。そのため、「70B INT4は35GBだから40GBのGPUへ安全に載る」とは判断できない。</p>
+  <div class="formula"><span class="label">FORMULA — 重み容量</span>
+重み容量 GB ≒ パラメータ数[B] × bit数 ÷ 8</div>
+  <table>
+    <thead><tr><th>モデル規模</th><th class="num">BF16 / FP16</th><th class="num">FP8 / INT8</th><th class="num">INT4</th></tr></thead>
+    <tbody>
+      <tr><td>32B</td><td class="num">64 GB</td><td class="num">32 GB</td><td class="num">16 GB</td></tr>
+      <tr><td>70B</td><td class="num">140 GB</td><td class="num">70 GB</td><td class="num">35 GB</td></tr>
+      <tr><td>753B</td><td class="num">1,506 GB</td><td class="num">753 GB</td><td class="num">376.5 GB</td></tr>
+    </tbody>
+  </table>
+  <p><small><span class="badge b-theory">理論値</span> 重みのみ。実VRAMは KVキャッシュ・Activation・Workspace・通信バッファ・量子化メタデータ・断片化余裕が加わり増える。</small></p>
+  <div class="callout caution"><span class="tag">誤解しやすい点</span>
+    70B INT4 = 35GB でも、40GB GPU へ安全に載るとは限らない。</div>
+  <h3>Dense と MoE の違い</h3>
+  <figure>
+    <img src="image/dense-moe-bookshelves.png" alt="Denseは全本棚参照、MoEは一部Expert棚を選ぶ">
+    <figcaption>Dense＝全員が働く組織（全本棚を毎回参照）。MoE＝専門家を呼ぶ組織（全棚を保有し一部だけ使う）。</figcaption>
+  </figure>
+  <p>Denseモデルでは、原則としてすべての重みが各トークンの計算に参加する。一方、MoEは多数の専門家、すなわちExpertを保存しておき、トークンごとに一部だけを選んで使う構造である。素材の例ではGLM-5.2の総パラメータは753Bであり、関連するGLM-5の報告では1トークン当たりのActive parametersは約40Bとされている。MoEでは「本棚全体を置く容量」と「今回実際に参照する本の量」を別々に考える必要がある。</p>
+</section>
+
+<section id="a3">
+  <span class="num">A-3</span>
+  <h2>机の広さがコンテキスト</h2>
+  <p>コンテキストは、モデルが1回の推論で参照できる情報の範囲であり、仕事部屋の机の広さに相当する。机の上には現在の質問だけでなく、System Prompt、Toolの定義、過去の会話、会話の要約、RAGで取得した文書、長期メモリ、Toolの実行結果が並ぶ。さらに、これから生成する回答や、モデルによってはReasoning Tokenも同じ上限を使う。</p>
+  <div class="stack">
+    <div class="row">System Prompt</div><div class="row">Tool定義</div><div class="row">過去の会話</div>
+    <div class="row">会話の要約</div><div class="row">RAGで取得した文書</div><div class="row">長期メモリから取得</div>
+    <div class="row">現在のユーザー入力</div><div class="row">Tool実行結果</div>
+    <div class="row out">生成する出力（＋モデルによってはReasoning tokens）</div>
+  </div>
+  <p>そのため、入力だけでコンテキスト上限を使い切ることはできない。たとえば40,960トークン対応のモデルでも、回答やReasoningに8,000トークンを確保するなら、入力へ許可できる量はそれより小さくしなければならない。Productionでは、モデルが公称するAdvertised context、推論サーバーが許可するServing context、アプリケーションが利用者へ提供するApplication contextを分けて設計する。</p>
+  <table>
+    <thead><tr><th>種類</th><th>意味</th></tr></thead>
+    <tbody>
+      <tr><td>Advertised context</td><td>モデルが公称する最大値</td></tr>
+      <tr><td>Serving context</td><td>推論サーバーで設定した最大値</td></tr>
+      <tr><td>Application context</td><td>アプリが実際に許可する上限</td></tr>
+    </tbody>
+  </table>
+  <p>1Mトークン対応という仕様も、「常に1Mを渡すべき」という意味ではない。長い入力はPrefill、すなわち回答生成前の読み込み処理を長くし、KVキャッシュを増やし、同時利用可能数を減らす。情報が増えすぎると必要な記述を見つけにくくなるため、長期記憶をすべて机へ積み上げるのではなく、今回必要な情報だけを選ぶことが重要である。</p>
+  <figure>
+    <img src="image/context-desk-overflow.png" alt="机に資料を積みすぎて回答を書く余白がない">
+    <figcaption>入力を最大まで詰めると、出力（回答）を書く場所が無くなる。</figcaption>
+  </figure>
+  <div class="callout caution"><span class="tag">強調</span>
+    1M対応 ≠ 常に1Mを渡すべき ≠ 100人が同時に1Mを使える ≠ どこにある情報でも同じ精度。</div>
+</section>
+
+<section id="a4">
+  <span class="num">A-4</span>
+  <h2>KVキャッシュは作業中の計算メモ</h2>
+  <p>KVキャッシュは、モデルがすでに読んだトークンを毎回最初から計算し直さないための作業メモである。Transformerは各層でAttentionに使うKeyとValueを計算する。過去のトークンについて得られたKeyとValueをGPUメモリへ保持しておくことで、次のトークンを効率よく生成できる。</p>
+  <p>MHAやGQAを使うモデルでは、1リクエストのKV容量を「2 × 層数 × KV Head数 × Head次元 × 1要素のbytes × Sequence長」で概算できる。先頭の2はKeyとValueの二つを保存するためである。Qwen3-32Bを、64層、8 KV Heads、Head次元128、BF16の2 bytesと仮定すると、1トークン当たり262,144 bytes、すなわち256KiBになる。</p>
+  <div class="formula"><span class="label">FORMULA — KV bytes/request</span>
+KV bytes = 2 × 層数 L × KV Head数 Hkv × Head次元 Dh × 1要素bytes × Sequence長 T</div>
+  <div class="example"><span class="label">EXAMPLE — Qwen3-32B（L=64, Hkv=8, Dh=128, BF16=2byte）</span>2 × 64 × 8 × 128 × 2 = 262,144 bytes/token = 256 KiB/token</div>
+  <p>この条件では、8Kトークンで約2GiB、32Kで約8GiB、40Kで約10GiBのKVキャッシュが1リクエストに必要になる。KVをFP8で保持できれば容量は概ね半分になるが、重みをINT4へ量子化しただけでKVも自動的に4bitになるわけではない。「モデルの重みが何bitか」と「KVキャッシュを何bitで保持するか」は別の設定である。</p>
+  <figure>
+    <img src="image/kv-scratchpad-per-token.png" alt="トークンが増えるほど計算メモが積み上がる">
+    <figcaption>文章（Sequence）が長くなるほど、計算メモ（KV）が積み上がる。</figcaption>
+  </figure>
+  <table>
+    <thead><tr><th>1リクエストのSequence長</th><th class="num">BF16 KV</th><th class="num">FP8 KV</th></tr></thead>
+    <tbody>
+      <tr><td>8K tokens</td><td class="num">2 GiB</td><td class="num">1 GiB</td></tr>
+      <tr><td>32K tokens</td><td class="num">8 GiB</td><td class="num">4 GiB</td></tr>
+      <tr><td>40K tokens</td><td class="num">10 GiB</td><td class="num">5 GiB</td></tr>
+    </tbody>
+  </table>
+  <div class="callout caution"><span class="tag">誤解しやすい点</span>
+    INT4 の重みを使っても、KVキャッシュが自動でINT4になるわけではない（重み=INT4／KV=BF16 は普通）。</div>
+</section>
+
+<section id="a5">
+  <span class="num">A-5</span>
+  <h2>利用者が増えると、作業メモも人数分増える</h2>
+  <p>同時利用数を考えるときに重要なのは、モデルの重みは利用者間で共有できても、KVキャッシュは生成中のSequenceごとに必要になることである。一つの本棚を複数人で共有することはできるが、作業中の計算メモまで一枚にまとめることはできない。</p>
+  <p>Qwen3-32B相当のBF16 KVでは、平均8KのSequenceを3本保持すると約6GiB、10本なら約20GiBを消費する。平均32Kになると、10本だけで約80GiB、20本では約160GiBに達する。人数とコンテキスト長を掛け合わせることで、KVが急速に増えることが分かる。</p>
+  <figure>
+    <img src="image/concurrent-desks-kv-growth.png" alt="共有本棚は1つ、机とメモは人数分増える">
+    <figcaption>共有本棚は1つ。増えるのは人数分の机＋計算メモ（KV）。</figcaption>
+  </figure>
+  <table>
+    <thead><tr><th class="num">同時Sequence</th><th class="num">平均Sequence長</th><th class="num">KVキャッシュ容量</th></tr></thead>
+    <tbody>
+      <tr><td class="num">3</td><td class="num">8K</td><td class="num">6 GiB</td></tr>
+      <tr><td class="num">10</td><td class="num">8K</td><td class="num">20 GiB</td></tr>
+      <tr><td class="num">10</td><td class="num">32K</td><td class="num">80 GiB</td></tr>
+      <tr><td class="num">20</td><td class="num">32K</td><td class="num">160 GiB</td></tr>
+    </tbody>
+  </table>
+  <p>96GBのGPUに、理論上約32GBのFP8重みを置き、32K当たり約8GiBのKVを使うと仮定すると、重み以外の全領域をKVへ使った単純計算でも同時Sequenceは7本程度である。実際には推論エンジンの作業領域や運用上の余裕が必要なので、提供可能数はさらに少なくなる。したがって、「利用者が10人いるか」ではなく、「ピーク時に何本のSequenceが、合計何トークン生存するか」で設計する必要がある。</p>
+  <div class="formula"><span class="label">FORMULA — 同時数（概算）</span>
+同時数 ≒ KV用VRAM ÷ 1SequenceのKV容量</div>
+  <div class="callout fact"><span class="tag">設計の勘所</span>
+    「登録者数」ではなく <strong>ピーク時に合計何トークンのSequenceが生存するか</strong> で設計する。</div>
+</section>
+
+<section id="a6">
+  <span class="num">A-6</span>
+  <h2>廊下の太さが、トークンを運ぶ速さ</h2>
+<div class="callout fact mb-col"><span class="tag">原理 ｜ メモリ律速</span><strong>AIの遅さは計算だけでなく、必要なデータをメモリから運ぶ速さにも左右されます。</strong><ul style="margin:.5em 0 .1em;padding-left:1.25em;font-size:.96em"><li style="margin:.2em 0">答えを1語作るたび、大量の重みとKVキャッシュを読みます。</li><li style="margin:.2em 0">メモリは資料を置く倉庫、演算器は作業机に当たります。</li><li style="margin:.2em 0">倉庫と机を結ぶメモリ帯域が、LLMの応答速度を決めます。</li></ul><br><span style="font-size:.85em;opacity:.75">参考: <a href="https://qiita.com/emi_ndk/items/b046e079521e36e8fbf1">Qiita「なぜLLMは遅いのか？ KV CacheとSpeculative Decodingの数学的理解」</a></span></div>
+  <p>ハードウェアを比較するときは、メモリ容量とメモリ帯域を分けて考える必要がある。容量はモデルやKVキャッシュを置けるかどうかを決め、帯域はそれらをどれだけ速く読み出せるかを左右する。大きな倉庫を持っていても、搬出する廊下が細ければ、荷物を運ぶ速度は上がらない。</p>
+  <p>下表の例では、RTX 5090は32GBと容量が限られる一方、理論メモリ帯域は1,792GB/sである。DGX Sparkは128GBを持つが帯域は273GB/sであり、Mac Studio M3 Ultraは最大512GB、819GB/sである。A100 80GB SXMは80GBと2,039GB/sを備える。この違いにより、「大きなモデルを載せられる機械」と「小さめのモデルを高速に生成できる機械」は一致しない。</p>
+  <figure>
+    <img src="image/memory-bandwidth-highway.png" alt="倉庫容量と搬出道路の太さは別">
+    <figcaption>容量（倉庫）と帯域（道路の太さ）は独立した別の指標。</figcaption>
+  </figure>
+  <table>
+    <thead><tr><th>ハードウェア</th><th class="num">容量</th><th>方式</th><th class="num">理論メモリ帯域</th></tr></thead>
+    <tbody>
+      <tr><td>RTX 5090</td><td class="num">32 GB</td><td>GDDR7</td><td class="num">1,792 GB/s</td></tr>
+      <tr><td>RTX 3090</td><td class="num">24 GB</td><td>GDDR6X</td><td class="num">936 GB/s</td></tr>
+      <tr><td>A100 80GB SXM</td><td class="num">80 GB</td><td>HBM2e</td><td class="num">2,039 GB/s</td></tr>
+      <tr><td>DGX Spark</td><td class="num">128 GB</td><td>LPDDR5X統合</td><td class="num">273 GB/s</td></tr>
+      <tr><td>Mac Studio M3 Ultra</td><td class="num">最大512 GB</td><td>統合メモリ</td><td class="num">819 GB/s</td></tr>
+    </tbody>
+  </table>
+  <p>短いコンテキストのDenseモデルをBatch 1で動かす場合、生成速度の粗い上限は「メモリ帯域 ÷ 重み容量」で見積もれる。32B Q4を理論16GBとするとRTX 5090は112 tok/s、70B Q4を35GBとするとDGX Sparkは7.8 tok/sが帯域上の天井となる。これらはKernel、演算、通信、量子化解除、KV読み出しを無視した理論Rooflineであり、実測予想値ではない。コンテキストが長くなればKVの読み出しも増えるため、実際の上限はさらに下がる。</p>
+  <div class="formula"><span class="label">FORMULA — 理論tok/s（短Context・Batch1）</span>
+理論tok/s ≒ メモリ帯域 ÷ モデル重み容量</div>
+  <div class="callout caution"><span class="tag">誤解しやすい点</span>
+    この値は <span class="badge b-theory">理論値</span> Roofline であり、実測値ではない。容量が大きい＝速い、ではない。</div>
+</section>
+
+<section id="a7">
+  <span class="num">A-7</span>
+  <h2>Reasoningは画面に見えない下書き</h2>
+  <p>Reasoningは、モデルが最終回答を出す前に生成する下書きや検討過程に相当する。画面に表示されない場合でも、通常は1トークンずつDecodeされるため、生成時間、コンテキスト、KVキャッシュを消費する。非表示にすることと、計算しないことは同じではない。</p>
+  <p>たとえば、利用者に見える回答が500トークンでも、内部で4,096トークンのReasoningを生成していれば、合計生成量は4,596トークンになる。50 tok/sなら、Reasoningなしの回答は約10秒だが、Reasoning込みでは約1分32秒かかる。生成量は9.19倍となり、Qwen3-32B相当のBF16 KVではReasoning部分だけで約1GiBの追加メモリを使用する。この値は特定条件による計算例であり、一般的な平均値ではない。</p>
+  <figure>
+    <img src="image/invisible-reasoning-notes.png" alt="見える回答500と隠れた下書き4096の対比">
+    <figcaption>見えるのは500トークンの回答でも、机の裏に4,096トークンの下書きが積まれている。</figcaption>
+  </figure>
+  <div class="formula"><span class="label">FORMULA — 総生成量</span>
+総生成 = Reasoning tokens + Visible answer tokens + Tool/format tokens</div>
+  <table>
+    <thead><tr><th class="num">Reasoning</th><th class="num">総生成量</th><th class="num">なし比</th><th class="num">完了時間(50tok/s)</th><th class="num">追加KV</th></tr></thead>
+    <tbody>
+      <tr><td class="num">0</td><td class="num">500</td><td class="num">1.00×</td><td class="num">10秒</td><td class="num">0</td></tr>
+      <tr><td class="num">1,024</td><td class="num">1,524</td><td class="num">3.05×</td><td class="num">30.5秒</td><td class="num">0.25 GiB</td></tr>
+      <tr><td class="num">4,096</td><td class="num">4,596</td><td class="num">9.19×</td><td class="num">1分32秒</td><td class="num">1 GiB</td></tr>
+      <tr><td class="num">16,384</td><td class="num">16,884</td><td class="num">33.8×</td><td class="num">5分38秒</td><td class="num">4 GiB</td></tr>
+      <tr><td class="num">25,000</td><td class="num">25,500</td><td class="num">51×</td><td class="num">8分30秒</td><td class="num">約6.1 GiB</td></tr>
+    </tbody>
+  </table>
+  <p><small><span class="badge b-approx">概算</span> Visible 500トークン・50 tok/s・KV 256KiB/token を仮定。追加KV = Reasoning tokens × KV bytes/token。</small></p>
+  <p>Reasoning EffortのLow、Medium、Highも、通常は固定されたトークン数を意味しない。Effortはモデルにどの程度深く考えさせるかを示すシグナルであり、実際のReasoning量は問題の難しさによって変化する。運用では、「Highなら何トークン」と決め打ちするのではなく、タスク別にReasoning Tokenの平均値とp95を計測する必要がある。</p>
+</section>
+
+<section id="a8">
+  <span class="num">A-8</span>
+  <h2>会話を覚えるのは、モデルではなく司書</h2>
+  <p>会話記憶の本質は、過去の情報を保存し、必要なときに取り出し、現在のコンテキストへ戻すことである。素材で整理された2026年6月時点の方式では、OpenAIやGoogleは以前の応答やInteractionをサーバー側で連結する仕組みを提供する。一方、AnthropicのMessages APIは基本的にステートレスであり、必要な履歴を開発者が送信し、Memory Toolの保存先も原則として開発者側が用意する。</p>
+  <table>
+    <thead><tr><th>提供者</th><th>会話状態</th><th>長期的な状態</th><th>管理主体</th></tr></thead>
+    <tbody>
+      <tr><td>OpenAI</td><td>previous_response_id</td><td>Conversations API</td><td>OpenAI または自前</td></tr>
+      <tr><td>Google</td><td>previous_interaction_id</td><td>Interaction object</td><td>Google</td></tr>
+      <tr><td>Anthropic</td><td>Messages配列を毎回送信</td><td>Memory Tool</td><td>原則として開発者</td></tr>
+    </tbody>
+  </table>
+  <p><small>素材記載の2026年6月時点の整理。</small></p>
+  <p>ローカルAIでも原理は同じである。モデルサーバーはできるだけステートレスに保ち、会話ログ、現在のタスク状態、ユーザー設定、検索用インデックス、文書やコードなどのArtifactを外部へ保存する。Context Builderが最新数ターン、Rolling Summary、今回関連するMemory、現在のTask Stateを選び、モデルへ渡す構成が扱いやすい。</p>
+  <figure>
+    <img src="image/context-builder-librarian.png" alt="複数の保管庫から司書が必要資料を選びLLMに渡す">
+    <figcaption>Event/Session/Structured/Semantic/Artifact から、司書が必要資料だけ選んで渡す。</figcaption>
+  </figure>
+  <div class="example"><span class="label">CONTEXT — 司書が机に並べるもの</span>context = latest_turns + rolling_summary + relevant_memory + task_state</div>
+  <p>全履歴を毎回投入すると、入力トークン、Prefill時間、KVキャッシュが増え、無関係な情報によって回答品質も下がり得る。また、KVキャッシュは巨大で監査や検索が難しいため、長期記憶の正本には向かない。個人の好みや案件情報をFine-tuningで重みへ焼き込むと削除や更新も難しくなるため、長期記憶は構造化DBや文書ストアへ置くのが基本である。</p>
+</section>
+
+<section id="a9">
+  <span class="num">A-9</span>
+  <h2>マルチエージェントは、全員に全資料を配らない</h2>
+  <p>マルチエージェントでは、Workerを増やすだけでなく、各Workerへ何を渡すかが重要である。Planner、Coder、Verifierの全員へ同じ巨大な会話履歴を送ると、コンテキストとKVキャッシュがWorker数に応じて増え、関係のない情報まで各Workerが処理することになる。</p>
+  <figure>
+    <img src="image/fugu-blackboard-office.png" alt="中央Blackboardと役割別Worker">
+    <figcaption>中央に共有Blackboard＋Artifact Store、周囲に役割別Worker。</figcaption>
+  </figure>
+  <p>望ましい構成は、中央に共有Task State、Decision Log、Artifact Indexを持つBlackboardを置き、各Workerには役割に必要な資料だけを渡すことである。WorkerがCoordinatorへ返す情報も、長い生ログではなく、結論、根拠、未解決事項、作成したArtifactへの参照へ圧縮する。共有メモリを巨大な会話ログではなく、構造化されたBlackboardとArtifact Storeとして設計することで、容量、速度、監査性を同時に改善できる。</p>
+  <div class="example"><span class="label">WORKER OUTPUT — 圧縮して返す</span>{ "conclusion": "...", "evidence": ["..."], "open_questions": ["..."], "artifacts": ["s3://..."] }</div>
+</section>
+
+<section id="a10">
+  <span class="num">A-10</span>
+  <h2>最後に持ち帰る4つの問い</h2>
+  <p>LLM基盤を理解するために、最後に四つの問いへ戻ると全体を整理できる。一つ目は「モデルが載るか」であり、主に重み、KVキャッシュ、作業領域を含むメモリ容量で決まる。二つ目は「十分に速いか」であり、メモリ帯域、読み出す重みとKVの量、Reasoningを含む総生成量で決まる。</p>
+  <p>三つ目は「同時に何人使えるか」であり、登録者数ではなく、ピーク時に生存するSequence数と総トークン数を確認する。四つ目は「会話を覚えられるか」であり、モデルサイズではなく、保存先、検索方法、要約、Context Builderの設計を確認する。この四つを分けて問うことで、「大きいモデルなら速く、長く覚え、多人数で使える」という誤った一括判断を避けられる。</p>
+  <div class="cards">
+    <div class="card"><h4>載るか？</h4><p>＝ メモリ<strong>容量</strong></p></div>
+    <div class="card"><h4>速いか？</h4><p>＝ <strong>帯域</strong> ＋ 読み出し量</p></div>
+    <div class="card"><h4>何人使えるか？</h4><p>＝ 生存 <strong>KV</strong></p></div>
+    <div class="card"><h4>覚えるか？</h4><p>＝ <strong>Memory Service</strong></p></div>
+    <div class="card" style="border-color:var(--orange)"><h4 style="color:var(--orange)">どれだけ考えさせるか？</h4><p>＝ <strong>Reasoning</strong>（見えない生成）</p></div>
+  </div>
+</section>
+
+<section id="a11">
+  <span class="num">A-11</span>
+  <h2>数値を確かめる資料室（付録）</h2>
+  <p>付録の数値表は、単なるスペック一覧ではなく、本文の判断を検算するための資料室として使う。重み容量、KV bytes/token、同時Sequence数、帯域Roofline、Reasoning時間は、それぞれ前提となるモデル構造、量子化方式、dtype、コンテキスト長、Batch条件が異なる。表を見るときは、まず条件が自分の環境と一致しているかを確認する。</p>
+  <p>また、数値には「理論値」「概算」「単一例」「特定ベンチマーク」の区別が必要である。帯域から求めたtok/sは理論Rooflineであり、実測値ではない。GLM-5.2のMLA容量は実装仮定に基づくコア部分の概算であり、公式文書に掲載されたReasoning量は平均ではなく単一例である。Aresの結果も特定モデルとTAU-Bench Retailにおける集計であり、すべての業務へ同じ倍率を適用するものではない。</p>
+  <details>
+    <summary>ハードウェア全表 ／ tok/s 理論上限</summary>
+    <table>
+      <thead><tr><th>ハードウェア</th><th class="num">8B Q4 (4GB)</th><th class="num">32B Q4 (16GB)</th><th class="num">70B Q4 (35GB)</th></tr></thead>
+      <tbody>
+        <tr><td>RTX 5090</td><td class="num">448</td><td class="num">112</td><td class="num bad">容量不足</td></tr>
+        <tr><td>RTX 3090</td><td class="num">234</td><td class="num">58.5</td><td class="num bad">容量不足</td></tr>
+        <tr><td>A100 80GB SXM</td><td class="num">510</td><td class="num">127</td><td class="num">58.3</td></tr>
+        <tr><td>DGX Spark</td><td class="num">68.3</td><td class="num">17.1</td><td class="num">7.8</td></tr>
+        <tr><td>Mac Studio M3 Ultra</td><td class="num">205</td><td class="num">51.2</td><td class="num">23.4</td></tr>
+      </tbody>
+    </table>
+    <p><small><span class="badge b-theory">理論値</span> Dense・Batch1・Q4・KV無視・オーバーヘッド無視の帯域上限（tok/s）。</small></p>
+  </details>
+  <details>
+    <summary>32B Q4 — Context長による低下（KV読み出しを加味）</summary>
+    <table>
+      <thead><tr><th>ハードウェア</th><th class="num">KV無視</th><th class="num">8K</th><th class="num">32K</th></tr></thead>
+      <tbody>
+        <tr><td>RTX 5090</td><td class="num">112</td><td class="num">98.7</td><td class="num">72.9</td></tr>
+        <tr><td>RTX 3090</td><td class="num">58.5</td><td class="num">51.6</td><td class="num bad strike">38.1 (OOM)</td></tr>
+        <tr><td>A100 80GB SXM</td><td class="num">127</td><td class="num">112</td><td class="num">82.9</td></tr>
+        <tr><td>DGX Spark</td><td class="num">17.1</td><td class="num">15.0</td><td class="num">11.1</td></tr>
+        <tr><td>Mac Studio M3 Ultra</td><td class="num">51.2</td><td class="num">45.1</td><td class="num">33.3</td></tr>
+      </tbody>
+    </table>
+    <p><small>RTX 3090の32Kは重み16GB＋KV約8.6GB＝約24.6GBで24GBを超過しOOM。</small></p>
+  </details>
+  <details>
+    <summary>GLM-5.2 MLA — KVコア概算</summary>
+    <div class="example"><span class="label">EXAMPLE</span>78層 × 576次元 × 2 bytes = 89,856 bytes/token ≒ 87.75 KiB/token
+（kv_lora_rank 512 + qk_rope_head_dim 64 = 576）</div>
+    <table>
+      <thead><tr><th class="num">Context</th><th class="num">MLAコアKV概算</th></tr></thead>
+      <tbody>
+        <tr><td class="num">32K</td><td class="num">約2.74 GiB</td></tr>
+        <tr><td class="num">128K</td><td class="num">約10.97 GiB</td></tr>
+        <tr><td class="num">1,048,576</td><td class="num">約87.75 GiB</td></tr>
+      </tbody>
+    </table>
+    <p><small><span class="badge b-approx">概算</span> MLAコア部分のみ。DSA Indexer等は別途。</small></p>
+  </details>
+  <details>
+    <summary>tok/s と完了時間 ／ Reasoning 公式単一例 ／ Ares研究</summary>
+    <table>
+      <thead><tr><th class="num">生成速度</th><th class="num">平均ITL</th><th class="num">600トークン生成</th></tr></thead>
+      <tbody>
+        <tr><td class="num">7 tok/s</td><td class="num">約143ms</td><td class="num">約85.6秒</td></tr>
+        <tr><td class="num">25 tok/s</td><td class="num">40ms</td><td class="num">約24秒</td></tr>
+        <tr><td class="num">50 tok/s</td><td class="num">20ms</td><td class="num">約12秒</td></tr>
+        <tr><td class="num">100 tok/s</td><td class="num">10ms</td><td class="num">約6秒</td></tr>
+        <tr><td class="num">1,000 tok/s</td><td class="num">1ms</td><td class="num">約0.6秒</td></tr>
+      </tbody>
+    </table>
+    <table>
+      <thead><tr><th>例 <span class="badge b-single">単一例</span></th><th class="num">Reasoning</th><th class="num">非Reasoning出力</th><th class="num">倍率</th></tr></thead>
+      <tbody>
+        <tr><td>OpenAI公式例</td><td class="num">1,024</td><td class="num">約162</td><td class="num">約7.3×</td></tr>
+        <tr><td>Gemini公式例</td><td class="num">297</td><td class="num">171</td><td class="num">約2.74×</td></tr>
+      </tbody>
+    </table>
+    <table>
+      <thead><tr><th>Effort方式 <span class="badge b-bench">特定ベンチ</span></th><th class="num">成功率</th><th class="num">Token消費</th></tr></thead>
+      <tbody>
+        <tr><td>常時Low</td><td class="num">35.0%</td><td class="num">25K</td></tr>
+        <tr><td>常時Medium</td><td class="num">47.3%</td><td class="num">137K</td></tr>
+        <tr><td>常時High</td><td class="num">54.8%</td><td class="num">1,007K</td></tr>
+        <tr><td>Ares動的選択</td><td class="num">58.5%</td><td class="num">476K</td></tr>
+      </tbody>
+    </table>
+    <p><small>Ares：gpt-oss-20b／TAU-Bench Retail の集計であり、一般則ではない。</small></p>
+  </details>
+</section>
+
+</main>
+<footer>
+  <p>勉強会資料・案A「机の上のLLM」 ／ 本文：Oracle執筆。数値は素材（情報1.md）に基づく。理論値・概算・単一例・特定ベンチの区別に注意。</p>
+  <p>他の案：<a href="index2.html">案B 1 GPUで何人さばけるか</a> ／ <a href="index3.html">案C AI基盤の投資配分</a></p>
+</footer>
+</body>
+</html>
