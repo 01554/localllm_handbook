@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI基盤の投資配分 — 速度・品質・記憶・統制の意思決定</title>
+<style>
+  :root{
+    --bg:#fafbfc; --ink:#2a2f36; --ink-soft:#5d6b7a; --line:#e6eaef; --card:#ffffff;
+    --green:#2e9e6b; --green-bg:#e7f5ee; --orange:#e08a3c; --orange-bg:#fdf0e3;
+    --red:#d24b43; --red-bg:#fbe9e7; --navy:#2f4860; --shadow:0 2px 16px rgba(47,72,96,.07);
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",sans-serif;
+    line-height:1.8;font-size:16px}
+  a{color:var(--green)}
+  header.hero{padding:80px 24px 60px;text-align:center;
+    background:linear-gradient(180deg,#f1f6f3 0%,var(--bg) 100%);border-bottom:1px solid var(--line)}
+  .kicker{letter-spacing:.3em;font-size:.78rem;color:var(--green);font-weight:700}
+  header.hero h1{font-size:clamp(1.8rem,4.5vw,3rem);margin:.4em 0 .2em;line-height:1.25;color:var(--navy)}
+  header.hero p.lead{font-size:clamp(1rem,2.2vw,1.25rem);color:var(--ink-soft);max-width:800px;margin:.6em auto}
+  nav.toc{position:sticky;top:0;z-index:20;background:rgba(250,251,252,.94);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);padding:10px 16px;font-size:.8rem;overflow-x:auto;white-space:nowrap}
+  nav.toc a{color:var(--ink-soft);text-decoration:none;margin-right:14px}
+  nav.toc a:hover{color:var(--green)}
+  main{max-width:960px;margin:0 auto;padding:8px 22px 80px}
+  section{padding:54px 0 10px;border-bottom:1px solid var(--line)}
+  .num{font:700 .8rem/1 var(--mono);color:var(--orange);letter-spacing:.15em}
+  section h2{font-size:clamp(1.35rem,3.2vw,1.95rem);margin:.25em 0 .5em;line-height:1.3;color:var(--navy)}
+  section h3{font-size:1.08rem;margin:1.6em 0 .4em}
+  p{margin:.7em 0}
+  .bignum{font:800 clamp(2rem,7vw,3.6rem)/1 -apple-system,sans-serif;color:var(--orange);margin:.2em 0}
+  .bignum small{font-size:.32em;color:var(--ink-soft);font-weight:600;display:block;letter-spacing:.05em}
+  figure{margin:1.4em 0;text-align:center}
+  figure img{max-width:100%;border-radius:14px;border:1px solid var(--line);background:#fff;box-shadow:var(--shadow)}
+  figure figcaption{font-size:.84rem;color:var(--ink-soft);margin-top:.5em}
+  table{width:100%;border-collapse:collapse;margin:1.1em 0;font-size:.9rem;background:var(--card);
+    border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  th,td{padding:.6em .8em;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  thead th{background:#eef2f1;color:var(--navy);font-size:.82rem}
+  tbody tr:last-child td{border-bottom:none}
+  td.num,th.num{text-align:right;font-family:var(--mono)}
+  .callout{border-radius:12px;padding:14px 18px;margin:1.2em 0;border-left:5px solid;font-size:.93rem}
+  .callout .tag{font-weight:800;font-size:.72rem;letter-spacing:.12em;display:block;margin-bottom:.2em;text-transform:uppercase}
+  .caution{background:var(--red-bg);border-color:var(--red)} .caution .tag{color:var(--red)}
+  .insight{background:var(--green-bg);border-color:var(--green)} .insight .tag{color:var(--green)}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:1.4em 0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow);text-align:center}
+  .card .icon{font-size:1.6rem}
+  .card h4{margin:.3em 0 .2em;font-size:.98rem;color:var(--navy)}
+  .card p{font-size:.82rem;color:var(--ink-soft);margin:.2em 0}
+  pre.code{background:#1f2a36;color:#dfeaf2;border-radius:12px;padding:16px 20px;margin:1.1em 0;
+    font-family:var(--mono);font-size:.84rem;line-height:1.6;overflow-x:auto}
+  pre.code .c{color:#8aa0b4}
+  details{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 18px;margin:1.2em 0}
+  details summary{cursor:pointer;font-weight:700;padding:10px 0;color:var(--navy)}
+  .badge{display:inline-block;font:700 .66rem/1 var(--mono);padding:.3em .5em;border-radius:6px;vertical-align:middle}
+  .b-theory{background:#e6eef7;color:#2f6fb0}.b-single{background:#efe6f7;color:#7a4fb0}.b-bench{background:var(--green-bg);color:var(--green)}
+  .quad{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:1.2em 0}
+  .quad .q{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--card);font-size:.86rem}
+  .quad .q b{color:var(--navy)}
+  footer{max-width:960px;margin:0 auto;padding:40px 22px 80px;color:var(--ink-soft);font-size:.85rem}
+</style>
+</head>
+<body>
+<div style="background:#fbe9e7;border-bottom:2px solid #d24b43;color:#7a201b;padding:12px 18px;font-size:.92rem;line-height:1.7;text-align:center">⚠ <strong>これは初版（ボツ）です。</strong>Opus が Codex とだけ制作した第一稿で、hello に「読みにくい」と打ち切られたバージョンです（参考保存）。 現行版 → <a href="index.html" style="color:#2e7d5b;font-weight:700">技術者向けハンドブック</a></div>
+
+<header class="hero">
+  <div class="kicker">勉強会 / 案C — 経営・プロダクト・基盤の意思決定</div>
+  <h1>AI基盤の投資配分</h1>
+  <p class="lead">速度・品質・記憶・統制の意思決定。<br><strong>最大モデルを買う前に、どの仕事を、どの速度・Context・Reasoningで処理するかを決める。</strong></p>
+</header>
+
+<nav class="toc">
+  <a href="#c0">0. 体感差</a><a href="#c1">1. 5つの予算</a><a href="#c2">2. 容量≠速度</a><a href="#c3">3. 1M Context</a>
+  <a href="#c4">4. 記憶の責任</a><a href="#c5">5. Reasoning</a><a href="#c6">6. Effortルーティング</a>
+  <a href="#c7">7. ローカル採用</a><a href="#c8">8. Worker倍率</a><a href="#c9">9. 指標</a><a href="#c10">10. 配置表</a><a href="#c11">付録</a>
+</nav>
+
+<main>
+
+<section id="c0">
+  <span class="num">C-0</span>
+  <h2>最終回答は10秒。でも実際は1分32秒</h2>
+  <div class="bignum">9.19×<small>見える回答の約9.19倍を、内部で生成している</small></div>
+  <p>ユーザーに見えるのは 500トークンの回答（50 tok/s なら 10秒相当）。しかし内部で 4,096トークンの Reasoning を生成していれば、実際の完了は <strong>約1分32秒</strong>、追加KVは <strong>1GiB</strong>。「速さ」も「コスト」も、見えない部分で決まります。</p>
+  <figure>
+    <img src="image/reasoning-latency-iceberg.png" alt="水面上500Visible・水面下4096Reasoningの氷山">
+    <figcaption>水面上＝見える回答、水面下＝Reasoning。請求と待ち時間は水面下も対象。</figcaption>
+  </figure>
+  <div class="callout caution"><span class="tag">注意</span>これは設定した仮定（Visible 500・Reasoning 4,096・50 tok/s）による比較例。</div>
+</section>
+
+<section id="c1">
+  <span class="num">C-1</span>
+  <h2>AIサービスには5つの予算がある</h2>
+  <p>技術項目は、意思決定の「箱」に整理できます。</p>
+  <figure>
+    <img src="image/five-ai-budgets.png" alt="Fit/Speed/Context/Think/Rememberの5ダイヤル">
+    <figcaption>Fit（載るか）/ Speed（速いか）/ Context / Think（Reasoning）/ Remember（記憶）。</figcaption>
+  </figure>
+  <table>
+    <thead><tr><th>経営上の質問</th><th>技術指標</th><th>利用者への影響</th></tr></thead>
+    <tbody>
+      <tr><td>載るか？（Fit）</td><td>VRAM 容量</td><td>そもそも使えるか</td></tr>
+      <tr><td>速いか？（Speed）</td><td>User tok/s・TTFV・帯域</td><td>待ち時間</td></tr>
+      <tr><td>どれだけ渡せるか？（Context）</td><td>Application context</td><td>精度・コスト</td></tr>
+      <tr><td>どれだけ考えさせるか？（Think）</td><td>Reasoning Effort</td><td>品質と待ち時間の両方</td></tr>
+      <tr><td>覚えられるか？（Remember）</td><td>Memory Service</td><td>継続性・統制</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="c2">
+  <span class="num">C-2</span>
+  <h2>容量が大きい機械と、速い機械は違う</h2>
+  <p>ハードウェアは単純な優劣ではなく、用途別のトレードオフです。</p>
+  <figure>
+    <img src="image/hardware-capacity-speed-quadrant.png" alt="容量×帯域の四象限にHW5種">
+    <figcaption>横軸=メモリ容量、縦軸=帯域。位置取りが用途を決める。</figcaption>
+  </figure>
+  <table>
+    <thead><tr><th>ハードウェア</th><th class="num">容量</th><th class="num">帯域</th><th class="num">32B Q4 理論tok/s</th><th>70B搭載</th></tr></thead>
+    <tbody>
+      <tr><td>RTX 5090</td><td class="num">32 GB</td><td class="num">1,792 GB/s</td><td class="num">112</td><td>×</td></tr>
+      <tr><td>RTX 3090</td><td class="num">24 GB</td><td class="num">936 GB/s</td><td class="num">58.5</td><td>×</td></tr>
+      <tr><td>A100 80GB SXM</td><td class="num">80 GB</td><td class="num">2,039 GB/s</td><td class="num">127</td><td>○</td></tr>
+      <tr><td>DGX Spark</td><td class="num">128 GB</td><td class="num">273 GB/s</td><td class="num">17.1</td><td>○ (7.8 tok/s)</td></tr>
+      <tr><td>Mac Studio M3 Ultra</td><td class="num">最大512 GB</td><td class="num">819 GB/s</td><td class="num">51.2</td><td>○ (23.4 tok/s)</td></tr>
+    </tbody>
+  </table>
+  <div class="callout insight"><span class="tag">対比</span>DGX Spark は128GBだが273GB/s（大容量・低速）。RTX 5090は32GBだが1,792GB/s（小容量・高速）。「載る」と「速い」は別の買い物。</div>
+  <div class="callout caution"><span class="tag">注意</span>tok/s は <span class="badge b-theory">理論値</span> Roofline であり、製品ベンチマークではない。</div>
+</section>
+
+<section id="c3">
+  <span class="num">C-3</span>
+  <h2>1M Contextは、1Mの便利な記憶ではない</h2>
+  <p>長いContextをストレージ代わりにすると、品質・待ち時間・KV・同時実行数すべてに跳ね返ります。</p>
+  <figure>
+    <img src="image/context-budget-funnel.png" alt="大量文書→Context Builderの漏斗→必要分だけLLMへ">
+    <figcaption>全件投入ではなく、Context Builderが必要分だけ漏斗で絞る。</figcaption>
+  </figure>
+  <div class="cards">
+    <div class="card"><div class="icon">📈</div><h4>Prefill 増</h4><p>応答が遅くなる</p></div>
+    <div class="card"><div class="icon">💾</div><h4>KV 増</h4><p>同時実行数が減る</p></div>
+    <div class="card"><div class="icon">🎯</div><h4>精度低下</h4><p>context rot</p></div>
+    <div class="card"><div class="icon">💰</div><h4>課金 増</h4><p>入力トークン増</p></div>
+  </div>
+  <p><small><span class="badge b-theory">概算</span> GLM-5.2 MLAコアで 1,048,576 Context は 1 Sequenceあたり約87.75GiB。1M を1人に出すだけでKVコアが約88GiB。</small></p>
+  <div class="callout caution"><span class="tag">注意</span>1M対応 ≠ 1Mを常用。出力・Reasoning領域を残す必要がある。</div>
+</section>
+
+<section id="c4">
+  <span class="num">C-4</span>
+  <h2>“会話を覚える”サービスの責任主体を決める</h2>
+  <p>機能比較ではなく「誰が会話状態を管理するか」で見ます。</p>
+  <table>
+    <thead><tr><th>提供者</th><th>会話状態</th><th>長期状態</th><th>状態管理主体</th></tr></thead>
+    <tbody>
+      <tr><td>OpenAI</td><td>previous_response_id</td><td>Conversations API</td><td>OpenAI または自前</td></tr>
+      <tr><td>Google</td><td>previous_interaction_id</td><td>Interaction object</td><td>Google</td></tr>
+      <tr><td>Anthropic</td><td>Messages配列を毎回送信</td><td>Memory Tool</td><td>原則として開発者</td></tr>
+    </tbody>
+  </table>
+  <p><small>素材記載の2026年6月時点。Anthropic Messages API はステートレス。</small></p>
+  <figure>
+    <img src="image/memory-control-plane.png" alt="LLMの外側のMemory Control Plane">
+    <figcaption>記憶は LLM の外側の Memory Control Plane（Event/Session/Structured/Semantic/Artifact）。</figcaption>
+  </figure>
+  <div class="callout caution"><span class="tag">注意</span>モデル重みは会話ごとに更新されない。「覚える」のは外部システムの責任。</div>
+</section>
+
+<section id="c5">
+  <span class="num">C-5</span>
+  <h2>Reasoningは品質向上策であり、同時に容量消費策</h2>
+  <p>ReasoningはON/OFFではなく、成功率・Token消費・待ち時間のトレードオフです。</p>
+  <table>
+    <thead><tr><th>公式単一例 <span class="badge b-single">単一例</span></th><th class="num">Reasoning</th><th class="num">Visible</th><th class="num">倍率</th></tr></thead>
+    <tbody>
+      <tr><td>OpenAI</td><td class="num">1,024</td><td class="num">約162</td><td class="num">約7.3×</td></tr>
+      <tr><td>Gemini</td><td class="num">297</td><td class="num">171</td><td class="num">約2.74×</td></tr>
+    </tbody>
+  </table>
+  <table>
+    <thead><tr><th>Effort <span class="badge b-bench">特定ベンチ</span></th><th class="num">成功率</th><th class="num">Token消費</th></tr></thead>
+    <tbody>
+      <tr><td>常時Low</td><td class="num">35.0%</td><td class="num">25K</td></tr>
+      <tr><td>常時Medium</td><td class="num">47.3%</td><td class="num">137K</td></tr>
+      <tr><td>常時High</td><td class="num">54.8%</td><td class="num">1,007K</td></tr>
+      <tr><td>Ares動的選択</td><td class="num">58.5%</td><td class="num">476K</td></tr>
+    </tbody>
+  </table>
+  <figure>
+    <img src="image/effort-cost-quality-frontier.png" alt="Token消費×品質の散布図にLow/Medium/High/Dynamic">
+    <figcaption>横軸=Token消費、縦軸=品質。動的選択がフロンティアを押し上げる。</figcaption>
+  </figure>
+  <div class="callout caution"><span class="tag">注意</span>公式例は平均ではない。Aresは特定ベンチ。Effortは固定Token Budgetではない。</div>
+</section>
+
+<section id="c6">
+  <span class="num">C-6</span>
+  <h2>すべての問い合わせをHighで考えさせない</h2>
+  <p>Reasoning Effort を、モデルルーティングと同列の運用ポリシーにします。</p>
+  <table>
+    <thead><tr><th>タスク</th><th>Reasoning</th></tr></thead>
+    <tbody>
+      <tr><td>分類・検索</td><td>OFF / Minimal</td></tr>
+      <tr><td>通常チャット</td><td>Low</td></tr>
+      <tr><td>コード・資料</td><td>Medium</td></tr>
+      <tr><td>複雑設計</td><td>High</td></tr>
+      <tr><td>長時間Agent</td><td>High / xhigh</td></tr>
+    </tbody>
+  </table>
+  <figure>
+    <img src="image/reasoning-escalation-router.png" alt="Model×Effort×Worker数を束ねる次世代Router">
+    <figcaption>失敗時に1段階ずつ上げる：Fast/Low → Medium → Strong/High → 複数Worker。</figcaption>
+  </figure>
+  <pre class="code">routes:
+  classification:   { model_tier: fast,     reasoning_effort: minimal }
+  normal_chat:      { model_tier: standard, reasoning_effort: low }
+  code_and_documents:{ model_tier: standard, reasoning_effort: medium }
+  complex_design:   { model_tier: strong,   reasoning_effort: high }
+
+escalation:
+  on_verifier_failure:
+    - raise_effort_one_level
+    - use_stronger_model
+    - add_specialized_workers</pre>
+  <p><small><code>reasoning_effort</code> は固定Token Budgetではなく振る舞いのシグナル。</small></p>
+  <div class="callout insight"><span class="tag">コール</span>次世代Router ＝ どのモデル × どのEffort × 何Worker。</div>
+</section>
+
+<section id="c7">
+  <span class="num">C-7</span>
+  <h2>ローカルAI採用判断は、モデルではなく運用境界で決める</h2>
+  <p>ローカルAI＝「PCで動かす」ではなく、「自社環境でモデルと状態を管理する設計」です。</p>
+  <figure>
+    <img src="image/cloud-local-decision-tree.png" alt="データ境界/状態管理/必要モデル/ピーク負荷で分岐">
+    <figcaption>データ境界・状態管理責任・必要モデル・ピーク負荷から選択肢を絞る。</figcaption>
+  </figure>
+  <table>
+    <thead><tr><th>論点</th><th>API中心</th><th>Self-host中心</th><th>確認事項</th></tr></thead>
+    <tbody>
+      <tr><td>データ所在</td><td>ベンダー側</td><td>自社境界内</td><td>機密区分・規制</td></tr>
+      <tr><td>状態の所有者</td><td>一部ベンダー</td><td>自社</td><td>削除要求対応</td></tr>
+      <tr><td>モデル選択</td><td>提供メニュー</td><td>自由（運用責任も）</td><td>更新頻度</td></tr>
+      <tr><td>運用負荷</td><td>低</td><td>高</td><td>人員・スキル</td></tr>
+      <tr><td>容量計画</td><td>ベンダー任せ</td><td>自社で試算</td><td>ピーク生存トークン</td></tr>
+      <tr><td>監査</td><td>ログ依存</td><td>自社設計</td><td>追跡可能性</td></tr>
+    </tbody>
+  </table>
+  <div class="callout caution"><span class="tag">注意</span>Self-host でも Memory Service は別途必要。モデルを置けば記憶が付くわけではない。</div>
+</section>
+
+<section id="c8">
+  <span class="num">C-8</span>
+  <h2>マルチエージェントでは、Worker数が新しいコスト倍率になる</h2>
+  <p>全Workerに全履歴を渡すと、コンテキストとKVが <strong>Worker数倍</strong> に膨らみます。</p>
+  <figure>
+    <img src="image/agent-multiplier-blackboard.png" alt="悪い例:全Worker巨大ログ複製 / 良い例:中央Blackboard">
+    <figcaption>悪い例：全Workerへ巨大ログ複製。良い例：中央Blackboard＋Artifact Store。</figcaption>
+  </figure>
+  <table>
+    <thead><tr><th>設計</th><th>Context量</th><th>KV影響</th><th>監査性</th></tr></thead>
+    <tbody>
+      <tr><td>全履歴を全Workerへ</td><td>Worker数倍</td><td>Worker数倍</td><td>低（重複ログ）</td></tr>
+      <tr><td>Blackboard＋Artifact</td><td>役割分の最小限</td><td>抑制</td><td>高（構造化）</td></tr>
+    </tbody>
+  </table>
+  <div class="callout insight"><span class="tag">原則</span>Worker output は「結論・根拠・未解決・Artifact参照」へ圧縮して返す。</div>
+</section>
+
+<section id="c9">
+  <span class="num">C-9</span>
+  <h2>経営ダッシュボードで見るべき指標</h2>
+  <p>単純な output tokens や平均応答時間だけでは、Reasoning型サービスを評価できません。</p>
+  <figure>
+    <img src="image/ai-ops-scorecard.png" alt="品質/速度/容量/Token消費/成功率の5面スコアカード">
+    <figcaption>品質・速度・容量・Token消費・成功率の5面で見る。</figcaption>
+  </figure>
+  <table>
+    <thead><tr><th>指標</th><th>何を示すか</th></tr></thead>
+    <tbody>
+      <tr><td>input_tokens / reasoning_tokens / visible_output_tokens</td><td>コスト内訳（見えない生成を分離）</td></tr>
+      <tr><td>TTFT_any / TTFV</td><td>生成開始 / 最初の回答までの体感</td></tr>
+      <tr><td>decode_tok/s_all / visible_tok/s</td><td>基盤性能 / 体感性能</td></tr>
+      <tr><td>peak_KV_bytes</td><td>同時実行の上限要因</td></tr>
+      <tr><td>requests/sec / task_success_rate</td><td>スループット / 品質</td></tr>
+    </tbody>
+  </table>
+  <div class="callout caution"><span class="tag">注意</span>「Visible tokens ÷ 応答時間」だけで基盤性能を比べない。Reasoning込みと分けて測る。</div>
+</section>
+
+<section id="c10">
+  <span class="num">C-10</span>
+  <h2>1枚で決めるAIワークロード配置表</h2>
+  <figure>
+    <img src="image/ai-workload-decision-canvas.png" alt="タスク難度×レイテンシ許容度のキャンバス">
+    <figcaption>縦=タスク難度、横=レイテンシ許容度。領域ごとに配置を決める。</figcaption>
+  </figure>
+  <div class="quad">
+    <div class="q"><b>難度 低 × 速さ要</b><br>Fast model / Low Effort / 同期</div>
+    <div class="q"><b>難度 高 × 速さ要</b><br>Strong model / Medium / Prompt Cache</div>
+    <div class="q"><b>難度 低 × 遅延許容</b><br>バッチ処理 / 低コストTier</div>
+    <div class="q"><b>難度 高 × 遅延許容</b><br>High/xhigh / 複数Worker / 非同期</div>
+  </div>
+  <p>下部の確認欄：<strong>容量・帯域・Context・Memory・Effort</strong> の5点をチェックしてから配置を確定。</p>
+</section>
+
+<section id="c11">
+  <span class="num">C-11</span>
+  <h2>技術付録：判断の根拠となる数式と全数値</h2>
+  <details>
+    <summary>主要な数式</summary>
+    <pre class="code"><span class="c"># 重み容量</span>
+Weight GB ≒ Params[B] × bits ÷ 8
+<span class="c"># KV</span>
+KV bytes/token = 2 × L × Hkv × Dh × dtype_bytes
+<span class="c"># 同時数</span>
+最大Sequence ≒ (VRAM − Weight − Reserve) ÷ (KV/token × 平均長)
+<span class="c"># tok/s Roofline</span>
+tok/s上限 ≈ 帯域 ÷ (Weight + KV読取)
+<span class="c"># Reasoning 時間</span>
+Completion ≈ Queue + Prefill + (Reasoning + Visible) ÷ tok/s + Tool</pre>
+  </details>
+  <details>
+    <summary>ハードウェア全表 ／ 理論tok/s</summary>
+    <table>
+      <thead><tr><th>HW</th><th class="num">容量</th><th class="num">帯域</th><th class="num">8B Q4</th><th class="num">32B Q4</th><th class="num">70B Q4</th></tr></thead>
+      <tbody>
+        <tr><td>RTX 5090</td><td class="num">32GB</td><td class="num">1,792</td><td class="num">448</td><td class="num">112</td><td class="num">—</td></tr>
+        <tr><td>RTX 3090</td><td class="num">24GB</td><td class="num">936</td><td class="num">234</td><td class="num">58.5</td><td class="num">—</td></tr>
+        <tr><td>A100 80GB SXM</td><td class="num">80GB</td><td class="num">2,039</td><td class="num">510</td><td class="num">127</td><td class="num">58.3</td></tr>
+        <tr><td>DGX Spark</td><td class="num">128GB</td><td class="num">273</td><td class="num">68.3</td><td class="num">17.1</td><td class="num">7.8</td></tr>
+        <tr><td>M3 Ultra</td><td class="num">512GB</td><td class="num">819</td><td class="num">205</td><td class="num">51.2</td><td class="num">23.4</td></tr>
+      </tbody>
+    </table>
+    <p><small><span class="badge b-theory">理論値</span> Dense・Batch1・Q4・KV無視の帯域上限。</small></p>
+  </details>
+  <details>
+    <summary>Qwen3-32B KV ／ GLM-5.2 MLA</summary>
+    <table>
+      <thead><tr><th>Qwen3-32B</th><th class="num">BF16 KV</th><th class="num">FP8 KV</th><th>GLM-5.2 MLA</th><th class="num">概算</th></tr></thead>
+      <tbody>
+        <tr><td>8K</td><td class="num">2 GiB</td><td class="num">1 GiB</td><td>32K</td><td class="num">2.74 GiB</td></tr>
+        <tr><td>32K</td><td class="num">8 GiB</td><td class="num">4 GiB</td><td>128K</td><td class="num">10.97 GiB</td></tr>
+        <tr><td>40K</td><td class="num">10 GiB</td><td class="num">5 GiB</td><td>1M</td><td class="num">87.75 GiB</td></tr>
+      </tbody>
+    </table>
+  </details>
+</section>
+
+</main>
+<footer>
+  <p>勉強会資料・案C「AI基盤の投資配分」／ 断定（高性能・低コスト）を避け、どの条件で有利かを記述。金額は素材になし。</p>
+  <p>現行版 → <a href="index.html">技術者向けハンドブック</a> ／ <a href="hardware.html">サーバーGPU編</a> ／ <a href="glossary.html">用語集</a></p>
+</footer>
+</body>
+</html>
